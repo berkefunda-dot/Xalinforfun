@@ -77,7 +77,6 @@
     cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
     cv.style.width = W + "px"; cv.style.height = H + "px";
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    // World->screen scale: keep players a sensible size, fill screen, follow ball.
     scale = Math.max(W / 620, H / 430);
   }
   window.addEventListener("resize", resize);
@@ -86,8 +85,8 @@
   // ---------- Pitch geometry (world units) ----------
   const P = {
     W: 1080, H: 720,
-    goalHalf: 70,          // half-height of goal mouth
-    boxW: 150, boxH: 320,  // penalty box
+    goalHalf: 70,
+    boxW: 150, boxH: 320,
     cx() { return this.W / 2; },
     cy() { return this.H / 2; },
   };
@@ -96,13 +95,13 @@
   const PLAYER_R = 13, BALL_R = 7;
   const PLAYER_SPEED = 188, PLAYER_SPEED_BALL = 158;
   const PLAYER_ACCEL = 1400;
-  const CONTROL_R = 20;        // distance to gain/keep possession
-  const DRIBBLE_AHEAD = 17;    // how far ball sits in front while dribbling
+  const CONTROL_R = 20;
+  const DRIBBLE_AHEAD = 17;
   const PASS_SPEED = 430, SHOT_SPEED = 620;
-  const BALL_FRICTION = 1.35;  // exp decay per second
-  const KICK_LOCKOUT = 0.42;   // s the kicking team can't re-grab
-  const AFTERTOUCH = 620;      // curve strength
-  const AFTERTOUCH_TIME = 0.9; // window after a kick
+  const BALL_FRICTION = 1.35;
+  const KICK_LOCKOUT = 0.42;
+  const AFTERTOUCH = 620;
+  const AFTERTOUCH_TIME = 0.9;
   const TACKLE_R = 26;
 
   const COL = {
@@ -112,14 +111,12 @@
     pitch1:"#1b9c4a", pitch2:"#17913f", line:"rgba(255,255,255,.85)",
   };
 
-  // Difficulty presets [aiSpeedMul, reactBoost, shootRange, passSmart]
   const DIFFS = [
-    { speed:0.86, react:0.30, range:200, smart:0.45, tackle:0.06 }, // Kolay
-    { speed:0.96, react:0.18, range:240, smart:0.65, tackle:0.10 }, // Normal
-    { speed:1.04, react:0.10, range:285, smart:0.85, tackle:0.16 }, // Zor
+    { speed:0.86, react:0.30, range:200, smart:0.45, tackle:0.06 },
+    { speed:0.96, react:0.18, range:240, smart:0.65, tackle:0.10 },
+    { speed:1.04, react:0.10, range:285, smart:0.85, tackle:0.16 },
   ];
 
-  // Formation: relative (x:0=own goal .. 1=opp goal, y:0..1). 6 per side (GK + 5).
   const FORM = [
     { x:0.05, y:0.50, gk:true,  role:"GK"  },
     { x:0.26, y:0.28, role:"DEF" },
@@ -133,17 +130,16 @@
   let dif = DIFFS[1], matchSecs = 180;
   let players = [], ball = null;
   let scoreH = 0, scoreA = 0, clock = 0, running = false, mode = "menu";
-  let activeIdx = -1;            // controlled human player index
+  let activeIdx = -1;
   let lastKickTeam = -1, kickLockout = 0, afterTeam = -1, afterTimer = 0;
-  let kickoffTeam = 1;          // team that takes kickoff (1 = away starts? home concedes)
-  let flash = null;             // {txt, t}
+  let kickoffTeam = 1;
+  let flash = null;
 
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function len(x, y) { return Math.hypot(x, y); }
 
   function homePos(team, f) {
-    // team 0 attacks +x (right). team 1 attacks -x (left) -> mirror x.
     const rx = team === 0 ? f.x : (1 - f.x);
     return { x: rx * P.W, y: f.y * P.H };
   }
@@ -167,17 +163,14 @@
   }
 
   function placeKickoff(team) {
-    // team takes kickoff at center; both sides retreat to own halves.
     players.forEach((p, i) => {
       const f = FORM[p.idx];
       let hp = homePos(p.team, f);
-      // squeeze everyone to their own half
       if (p.team === 0) hp.x = Math.min(hp.x, P.cx() - 30);
       else hp.x = Math.max(hp.x, P.cx() + 30);
       p.x = hp.x; p.y = hp.y; p.vx = p.vy = 0;
     });
     ball.x = P.cx(); ball.y = P.cy(); ball.vx = ball.vy = 0; ball.owner = -1;
-    // nudge a forward of the kickoff team near the ball
     const fwd = players.find(p => p.team === team && p.role === "FWD");
     if (fwd) { fwd.x = P.cx() + (team === 0 ? -28 : 28); fwd.y = P.cy(); }
     lastKickTeam = -1; kickLockout = 0; afterTeam = -1; afterTimer = 0;
@@ -198,7 +191,7 @@
     mode = "goal"; running = false;
     setTimeout(() => {
       if (mode !== "goal") return;
-      placeKickoff(scoringTeam === 0 ? 1 : 0); // conceding team kicks off
+      placeKickoff(scoringTeam === 0 ? 1 : 0);
       mode = "play"; running = true;
     }, 1400);
   }
@@ -212,9 +205,7 @@
 
   // ---------- Possession / kicks ----------
   function teamOf(i) { return i < 0 ? -1 : players[i].team; }
-
   function giveBallTo(i) { ball.owner = i; }
-
   function loseBall(prevTeam, lockout) {
     ball.owner = -1; lastKickTeam = prevTeam; kickLockout = lockout || KICK_LOCKOUT;
   }
@@ -239,10 +230,9 @@
     players.forEach((q, j) => {
       if (q.team !== p.team || j === i || q.gk) return;
       const dx = q.x - p.x, dy = q.y - p.y;
-      const ahead = dx * fwdDir; // positive = toward opp goal
+      const ahead = dx * fwdDir;
       const dist = len(dx, dy);
       if (dist < 40) return;
-      // prefer teammates ahead and not too far
       const score = ahead * 1.4 - dist * 0.5 - Math.abs(dy) * 0.2;
       if (score > bestScore) { bestScore = score; best = j; }
     });
@@ -255,25 +245,21 @@
     let dx, dy;
     if (tgt >= 0) {
       const q = players[tgt];
-      // lead the pass a touch toward their motion
       dx = (q.x + q.vx * 0.25) - p.x; dy = (q.y + q.vy * 0.25) - p.y;
     } else {
       dx = p.dirx; dy = p.diry;
     }
     const d = len(dx, dy) || 1;
-    const dist = d;
-    const speed = clamp(dist * 2.2, 300, PASS_SPEED + 60);
+    const speed = clamp(d * 2.2, 300, PASS_SPEED + 60);
     kick(i, dx, dy, speed, false);
-    // hand control to receiver for nicer feel
     if (tgt >= 0 && p.team === 0) activeIdx = tgt;
   }
 
   function doShoot(i) {
     const p = players[i];
-    const gx = p.team === 0 ? P.W : 0;     // opponent goal x
+    const gx = p.team === 0 ? P.W : 0;
     const gy = P.cy() + rnd(-P.goalHalf * 0.7, P.goalHalf * 0.7);
     let dx = gx - p.x, dy = gy - p.y;
-    // if player is clearly aiming with joystick, honour facing
     if (len(p.dirx, p.diry) > 0.2 && p.team === 0 && (joy.active)) {
       dx = p.dirx; dy = p.diry;
     }
@@ -285,7 +271,6 @@
     if (ball.owner < 0 || players[ball.owner].team === p.team) return false;
     const o = players[ball.owner];
     if (len(o.x - p.x, o.y - p.y) <= TACKLE_R) {
-      // knock loose, slight forward nudge for tackler's side
       const fwd = p.team === 0 ? 1 : -1;
       ball.owner = -1; lastKickTeam = o.team; kickLockout = 0.30;
       ball.vx = fwd * rnd(80, 150) + rnd(-60, 60);
@@ -296,10 +281,10 @@
     return false;
   }
 
-  // ---------- Input: virtual joystick + buttons ----------
+  // ---------- Input ----------
   const joy = { active:false, id:null, bx:0, by:0, kx:0, ky:0, vx:0, vy:0 };
   const btn = { pass:false, shoot:false };
-  let passEdge = false, shootEdge = false; // pressed-this-frame flags
+  let passEdge = false, shootEdge = false;
 
   function btnLayout() {
     const r = Math.max(46, Math.min(W, H) * 0.085);
@@ -318,7 +303,7 @@
     return null;
   }
 
-  const pointers = new Map(); // id -> role
+  const pointers = new Map();
 
   function onDown(e) {
     if (mode === "menu" || mode === "fulltime") return;
@@ -373,7 +358,6 @@
   window.addEventListener("mousemove", e => { if (pointers.size) onMove(e); });
   window.addEventListener("mouseup", onUp);
 
-  // Keyboard (desktop testing)
   const keys = {};
   window.addEventListener("keydown", e => {
     keys[e.key.toLowerCase()] = true;
@@ -394,10 +378,9 @@
     return { x, y };
   }
 
-  // ---------- Active player selection ----------
+  // ---------- Active player ----------
   function pickActive() {
     if (ball.owner >= 0 && players[ball.owner].team === 0) { activeIdx = ball.owner; return; }
-    // nearest outfield home player to ball
     let best = -1, bd = 1e9;
     players.forEach((p, i) => {
       if (p.team !== 0 || p.gk) return;
@@ -434,7 +417,6 @@
 
     pickActive();
 
-    // ----- Human control of active player -----
     const human = activeIdx >= 0 ? players[activeIdx] : null;
     if (human) {
       let ix = joy.active ? joy.vx : 0, iy = joy.active ? joy.vy : 0;
@@ -448,7 +430,6 @@
       if (passEdge)  { if (haveBall) doPass(globalIdx(human)); else { tackle(globalIdx(human)); } }
       if (shootEdge) { if (haveBall) doShoot(globalIdx(human)); else { tackle(globalIdx(human)); } }
 
-      // aftertouch: bend ball in flight if our team kicked & still steering
       if (afterTeam === 0 && afterTimer > 0 && il > 0.2 && ball.owner < 0) {
         ball.vx += ix * AFTERTOUCH * dt;
         ball.vy += iy * AFTERTOUCH * dt;
@@ -456,7 +437,6 @@
     }
     passEdge = false; shootEdge = false;
 
-    // ----- AI for all other players -----
     for (let i = 0; i < players.length; i++) {
       const p = players[i]; const gi = globalIdx(p);
       if (p.kickCd > 0) p.kickCd = Math.max(0, p.kickCd - dt);
@@ -466,17 +446,14 @@
       aiPlayer(p, gi, dt);
     }
 
-    // ----- Integrate players -----
     for (const p of players) {
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.vx *= Math.exp(-3.0 * dt); p.vy *= Math.exp(-3.0 * dt);
-      // keep on pitch (with a little margin behind goals)
       p.x = clamp(p.x, -8, P.W + 8);
       p.y = clamp(p.y, PLAYER_R, P.H - PLAYER_R);
     }
     separatePlayers();
 
-    // ----- Possession & ball -----
     updatePossession(dt);
     integrateBall(dt);
     checkGoal();
@@ -487,7 +464,6 @@
     const lineX = p.team === 0 ? 36 : P.W - 36;
     let ty = clamp(ball.y, P.cy() - P.goalHalf - 30, P.cy() + P.goalHalf + 30);
     let tx = lineX;
-    // rush out if ball is very close and loose / opponent threat near goal
     const dxToOwn = Math.abs(ball.x - ownGoalX);
     if (dxToOwn < 150 && Math.abs(ball.y - P.cy()) < P.boxH / 2 + 30) {
       tx = clamp(ball.x, ownGoalX === 0 ? 22 : P.W - 120, ownGoalX === 0 ? 120 : P.W - 22);
@@ -495,7 +471,6 @@
     }
     moveToward(p, tx, ty, 1.0, dt);
     setDir(p, ball.x - p.x, ball.y - p.y);
-    // GK clears the ball if owns it
     if (ball.owner === globalIdx(p)) {
       const fwd = p.team === 0 ? 1 : -1;
       kick(globalIdx(p), fwd, rnd(-0.4, 0.4), PASS_SPEED, false);
@@ -505,39 +480,28 @@
   function aiPlayer(p, gi, dt) {
     const myTeam = p.team;
     const ownerTeam = teamOf(ball.owner);
-    const fwd = myTeam === 0 ? 1 : -1;
     p.decide -= dt;
 
-    // Decide team-level role: am I the closest to the ball on my team (besides GK)?
-    const chaser = closestOutfield(myTeam, ball.x, ball.y, gi >= 0 ? -1 : -1);
+    const chaser = closestOutfield(myTeam, ball.x, ball.y, -1);
     const amChaser = (chaser === gi);
 
-    if (ball.owner === gi) {
-      // I have the ball -> attack
-      aiOnBall(p, gi, dt);
-      return;
-    }
+    if (ball.owner === gi) { aiOnBall(p, gi, dt); return; }
 
     if (ownerTeam === myTeam && ownerTeam >= 0) {
-      // teammate has ball -> make a supporting run forward / spread
       const hp = supportPos(p);
       moveToward(p, hp.x, hp.y, 0.95 * dif.speed, dt);
       setDir(p, p.vx, p.vy);
       return;
     }
 
-    // ball is loose or opponent has it
     if (amChaser || ball.owner < 0) {
-      // chase / press the ball (lead it)
       const tx = ball.x + ball.vx * 0.18, ty = ball.y + ball.vy * 0.18;
       moveToward(p, tx, ty, (myTeam === 1 ? dif.speed : 1.0), dt);
       setDir(p, ball.x - p.x, ball.y - p.y);
-      // attempt tackle if opponent owns and close
       if (ownerTeam >= 0 && ownerTeam !== myTeam) {
         const tprob = (myTeam === 1 ? dif.tackle : 0.10);
         if (len(players[ball.owner].x - p.x, players[ball.owner].y - p.y) < TACKLE_R + 4
             && Math.random() < tprob) {
-          // AI tackle
           const o = players[ball.owner];
           ball.owner = -1; lastKickTeam = o.team; kickLockout = 0.30;
           ball.vx = (myTeam === 0 ? 1 : -1) * rnd(60,130); ball.vy = rnd(-80,80);
@@ -545,7 +509,6 @@
         }
       }
     } else {
-      // hold formation, shifted toward ball
       const hp = markPos(p);
       moveToward(p, hp.x, hp.y, 0.9 * (myTeam === 1 ? dif.speed : 1), dt);
       setDir(p, ball.x - p.x, ball.y - p.y);
@@ -561,19 +524,16 @@
 
     if (p.decide <= 0) {
       p.decide = 0.12 + dif.react * Math.random();
-      // shoot?
       if (distGoal < dif.range && Math.abs(p.y - P.cy()) < P.H * 0.42) {
         if (Math.random() < 0.55) { doShoot(gi); return; }
       }
-      // pass under pressure (smarter teams pass more)
       if (pressure < 46 && Math.random() < dif.smart) {
         const tgt = nearestTeammateAhead(gi);
         if (tgt >= 0) { doPass(gi); return; }
       }
     }
-    // dribble toward goal, drift to center channel, avoid touchline
     let ty = P.cy() * 0.4 + p.y * 0.6;
-    if (pressure < 60) ty += (p.y < P.cy() ? 40 : -40); // little jink
+    if (pressure < 60) ty += (p.y < P.cy() ? 40 : -40);
     moveToward(p, goalX, clamp(ty, 60, P.H - 60), 1.0 * (p.team === 1 ? dif.speed : 1), dt);
     setDir(p, fwd, (ty - p.y) * 0.02);
   }
@@ -597,7 +557,6 @@
     return best;
   }
   function supportPos(p) {
-    // spread out ahead of the ball
     const fwd = p.team === 0 ? 1 : -1;
     const base = homePos(p.team, FORM[p.idx]);
     let x = base.x * 0.45 + (ball.x + fwd * 90) * 0.55;
@@ -606,7 +565,6 @@
   }
   function markPos(p) {
     const base = homePos(p.team, FORM[p.idx]);
-    // hold formation but shift toward the ball (stay roughly goal-side)
     const x = base.x * 0.6 + ball.x * 0.4;
     const y = base.y * 0.55 + ball.y * 0.45;
     return { x: clamp(x, 30, P.W - 30), y: clamp(y, 50, P.H - 50) };
@@ -631,7 +589,6 @@
 
   function updatePossession(dt) {
     if (ball.owner >= 0) {
-      // dribble: stick ball ahead of owner
       const p = players[ball.owner];
       const tx = p.x + p.dirx * DRIBBLE_AHEAD;
       const ty = p.y + p.diry * DRIBBLE_AHEAD;
@@ -640,18 +597,14 @@
       ball.vx = p.vx; ball.vy = p.vy;
       return;
     }
-    // try to gain possession
     let best = -1, bd = CONTROL_R;
     players.forEach((p, i) => {
       if (p.kickCd > 0) return;
-      if (kickLockout > 0 && p.team === lastKickTeam) return; // can't immediately reclaim own kick
+      if (kickLockout > 0 && p.team === lastKickTeam) return;
       const d = len(p.x - ball.x, p.y - ball.y);
       if (d < bd) { bd = d; best = i; }
     });
-    if (best >= 0) {
-      giveBallTo(best);
-      afterTeam = -1; afterTimer = 0;
-    }
+    if (best >= 0) { giveBallTo(best); afterTeam = -1; afterTimer = 0; }
   }
 
   function integrateBall(dt) {
@@ -660,10 +613,8 @@
     ball.vx *= Math.exp(-BALL_FRICTION * dt);
     ball.vy *= Math.exp(-BALL_FRICTION * dt);
     if (len(ball.vx, ball.vy) < 4) { ball.vx = 0; ball.vy = 0; }
-    // bounce off top/bottom touchlines
     if (ball.y < BALL_R) { ball.y = BALL_R; ball.vy = Math.abs(ball.vy) * 0.6; }
     if (ball.y > P.H - BALL_R) { ball.y = P.H - BALL_R; ball.vy = -Math.abs(ball.vy) * 0.6; }
-    // side walls (outside goal mouth) -> bounce; goal handled separately
     const inMouth = ball.y > P.cy() - P.goalHalf && ball.y < P.cy() + P.goalHalf;
     if (!inMouth) {
       if (ball.x < BALL_R) { ball.x = BALL_R; ball.vx = Math.abs(ball.vx) * 0.6; }
@@ -675,16 +626,16 @@
     if (ball.owner >= 0) return;
     const inMouth = ball.y > P.cy() - P.goalHalf && ball.y < P.cy() + P.goalHalf;
     if (!inMouth) return;
-    if (ball.x < -BALL_R) goal(1);          // crossed left line -> away (team1) scores
-    else if (ball.x > P.W + BALL_R) goal(0); // crossed right line -> home (team0) scores
+    if (ball.x < -BALL_R) goal(1);
+    else if (ball.x > P.W + BALL_R) goal(0);
   }
 
   // ---------- Camera ----------
   const cam = { x: P.cx(), y: P.cy() };
   function updateCamera(dt) {
-    const tx = ball.x, ty = ball.y;
-    cam.x += (tx - cam.x) * Math.min(1, 4 * dt);
-    cam.y += (ty - cam.y) * Math.min(1, 4 * dt);
+    if (!ball) return;
+    cam.x += (ball.x - cam.x) * Math.min(1, 4 * dt);
+    cam.y += (ball.y - cam.y) * Math.min(1, 4 * dt);
     const halfW = W / scale / 2, halfH = H / scale / 2;
     const mx = 40, my = 40;
     cam.x = clamp(cam.x, halfW - mx, P.W - halfW + mx);
@@ -699,19 +650,19 @@
   function draw() {
     ctx.clearRect(0, 0, W, H);
     drawPitch();
-    drawBallShadow();
-    drawPlayers();
-    drawBall();
-    drawHUD();
+    if (ball) {            // varlıklar yokken (menü) çizme — render döngüsü çökmesin
+      drawBallShadow();
+      drawPlayers();
+      drawBall();
+      drawHUD();
+    }
     drawControls();
     drawFlash();
   }
 
   function drawPitch() {
-    // backdrop
     ctx.fillStyle = "#0a3a1c";
     ctx.fillRect(0, 0, W, H);
-    // mown stripes
     const stripes = 12, sw = P.W / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 ? COL.pitch1 : COL.pitch2;
@@ -719,31 +670,21 @@
     }
     ctx.lineWidth = Math.max(1.5, 2.4 * scale);
     ctx.strokeStyle = COL.line;
-    // outer
     rectW(0, 0, P.W, P.H);
-    // halfway
     line(P.cx(), 0, P.cx(), P.H);
-    // center circle
     circle(P.cx(), P.cy(), 78, false);
     dot(P.cx(), P.cy(), 3);
-    // boxes + goals each side
     drawBox(0); drawBox(1);
   }
   function drawBox(side) {
-    const gx = side === 0 ? 0 : P.W;
-    const dir = side === 0 ? 1 : -1;
-    // penalty box
     rectW(side === 0 ? 0 : P.W - P.boxW, P.cy() - P.boxH / 2, P.boxW, P.boxH);
-    // 6-yard
     const sw = P.boxW * 0.45, sh = P.boxH * 0.5;
     rectW(side === 0 ? 0 : P.W - sw, P.cy() - sh / 2, sw, sh);
-    // goal
     ctx.save();
     ctx.strokeStyle = "rgba(255,255,255,.95)";
     ctx.lineWidth = Math.max(2, 3 * scale);
     const gd = 18;
     rectW(side === 0 ? -gd : P.W, P.cy() - P.goalHalf, gd, P.goalHalf * 2);
-    // net hint
     ctx.strokeStyle = "rgba(255,255,255,.25)";
     ctx.lineWidth = 1;
     for (let i = 1; i < 5; i++) {
@@ -754,29 +695,23 @@
   }
 
   function drawPlayers() {
-    // sort by y for slight depth
     const order = [...players].sort((a, b) => a.y - b.y);
     for (const p of order) {
       const gi = globalIdx(p);
       const main = p.gk ? (p.team === 0 ? COL.gkHome : COL.gkAway)
                         : (p.team === 0 ? COL.home : COL.away);
       const dark = p.team === 0 ? COL.homeDark : COL.awayDark;
-      // shadow
       ctx.fillStyle = "rgba(0,0,0,.28)";
       ellipse(p.x + 3, p.y + 5, PLAYER_R, PLAYER_R * 0.7);
-      // body
       ctx.fillStyle = main;
       circle(p.x, p.y, PLAYER_R, true);
       ctx.lineWidth = Math.max(1, 1.5 * scale);
       ctx.strokeStyle = dark; circle(p.x, p.y, PLAYER_R, false);
-      // facing tick
       ctx.strokeStyle = dark; ctx.lineWidth = Math.max(2, 3 * scale);
       line(p.x, p.y, p.x + p.dirx * PLAYER_R, p.y + p.diry * PLAYER_R);
-      // active highlight (human)
       if (gi === activeIdx) {
         ctx.strokeStyle = "#fff"; ctx.lineWidth = Math.max(2, 2.6 * scale);
         circle(p.x, p.y, PLAYER_R + 5, false);
-        // arrow above
         ctx.fillStyle = "#fff";
         const ax = sx(p.x), ay = sy(p.y) - (PLAYER_R + 16) * scale;
         ctx.beginPath();
@@ -792,39 +727,32 @@
     ellipse(ball.x + 2, ball.y + 4, BALL_R, BALL_R * 0.7);
   }
   function drawBall() {
+    if (!ball) return;
     ctx.fillStyle = "#fff";
     circle(ball.x, ball.y, BALL_R, true);
     ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.lineWidth = 1.2;
     circle(ball.x, ball.y, BALL_R, false);
-    // pentagon dots
     ctx.fillStyle = "#1d1a1a";
     dot(ball.x, ball.y, Math.max(1.3, 1.6 * scale * 0.7));
   }
 
   function drawHUD() {
-    const m = mode;
-    const mm = String(Math.floor(clock / 60)).padStart(1, "0");
-    const ss = String(Math.floor(clock % 60)).padStart(2, "0");
     const remain = Math.max(0, matchSecs - clock);
     const rmm = String(Math.floor(remain / 60));
     const rss = String(Math.floor(remain % 60)).padStart(2, "0");
-    const txt = `${rmm}:${rss}`;
+    const txt = rmm + ":" + rss;
     const w = Math.min(W * 0.7, 360), x = W / 2 - w / 2, y = 10, h = 42;
     roundRect(x, y, w, h, 10);
     ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fill();
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.round(h*0.5)}px -apple-system, Arial`;
-    // home
+    ctx.font = "bold " + Math.round(h*0.5) + "px -apple-system, Arial";
     ctx.fillStyle = COL.home; roundChip(x + 8, y + 7, 30, h - 14);
     ctx.fillStyle = "#fff"; ctx.fillText("EV", x + 23, y + h / 2);
-    // away
     ctx.fillStyle = COL.away; roundChip(x + w - 38, y + 7, 30, h - 14);
     ctx.fillStyle = "#fff"; ctx.fillText("DEP", x + w - 23, y + h / 2);
-    // score
-    ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.round(h*0.62)}px -apple-system, Arial`;
-    ctx.fillText(`${scoreH} - ${scoreA}`, W / 2, y + h / 2 - 1);
-    // timer
-    ctx.font = `600 ${Math.round(h*0.34)}px -apple-system, Arial`;
+    ctx.fillStyle = "#fff"; ctx.font = "bold " + Math.round(h*0.62) + "px -apple-system, Arial";
+    ctx.fillText(scoreH + " - " + scoreA, W / 2, y + h / 2 - 1);
+    ctx.font = "600 " + Math.round(h*0.34) + "px -apple-system, Arial";
     ctx.fillStyle = "rgba(255,255,255,.85)";
     ctx.fillText(txt, W / 2, y + h - 8);
   }
@@ -832,7 +760,6 @@
 
   function drawControls() {
     if (mode === "menu" || mode === "fulltime") return;
-    // joystick
     if (joy.active) {
       const maxR = Math.max(40, Math.min(W, H) * 0.10);
       ctx.fillStyle = "rgba(255,255,255,.12)";
@@ -842,14 +769,12 @@
       ctx.fillStyle = "rgba(255,255,255,.65)";
       ctx.beginPath(); ctx.arc(joy.kx, joy.ky, maxR * 0.42, 0, 7); ctx.fill();
     } else {
-      // hint ring bottom-left
       const hx = Math.max(70, W * 0.13), hy = H - Math.max(80, H * 0.16);
       ctx.strokeStyle = "rgba(255,255,255,.18)"; ctx.lineWidth = 2;
       ctx.beginPath(); ctx.arc(hx, hy, 46, 0, 7); ctx.stroke();
       ctx.fillStyle = "rgba(255,255,255,.35)"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
       ctx.font = "12px -apple-system, Arial"; ctx.fillText("KOŞ", hx, hy);
     }
-    // buttons
     const L = btnLayout();
     drawBtn(L.shoot.x, L.shoot.y, L.r, "ŞUT", "#D75150", btn.shoot);
     drawBtn(L.pass.x, L.pass.y, L.r * 0.86, "PAS", "#f0a93f", btn.pass);
@@ -863,7 +788,7 @@
     ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke();
     ctx.fillStyle = pressed ? color : "#fff";
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = `bold ${Math.round(r*0.42)}px -apple-system, Arial`;
+    ctx.font = "bold " + Math.round(r*0.42) + "px -apple-system, Arial";
     ctx.fillText(label, x, y);
   }
 
@@ -872,7 +797,7 @@
     const a = Math.min(1, flash.t);
     ctx.globalAlpha = a;
     ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.font = `900 ${Math.round(Math.min(W,H)*0.16)}px -apple-system, Arial`;
+    ctx.font = "900 " + Math.round(Math.min(W,H)*0.16) + "px -apple-system, Arial";
     ctx.lineWidth = 6; ctx.strokeStyle = "rgba(0,0,0,.5)";
     ctx.strokeText(flash.txt, W / 2, H * 0.4);
     ctx.fillStyle = "#fff";
@@ -880,13 +805,10 @@
     ctx.globalAlpha = 1;
   }
 
-  // primitive helpers (world coords -> screen)
   function line(x1, y1, x2, y2) {
     ctx.beginPath(); ctx.moveTo(sx(x1), sy(y1)); ctx.lineTo(sx(x2), sy(y2)); ctx.stroke();
   }
-  function rectW(x, y, w, h) {
-    ctx.strokeRect(sx(x), sy(y), w * scale, h * scale);
-  }
+  function rectW(x, y, w, h) { ctx.strokeRect(sx(x), sy(y), w * scale, h * scale); }
   function circle(x, y, r, fill) {
     ctx.beginPath(); ctx.arc(sx(x), sy(y), r * scale, 0, 7);
     if (fill) ctx.fill(); else ctx.stroke();
@@ -909,9 +831,12 @@
   let last = performance.now();
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
-    dt = Math.min(dt, 0.05); // clamp big gaps
+    dt = Math.min(dt, 0.05);
     if (flash) { flash.t -= dt; if (flash.t <= 0) flash = null; }
-    if (mode === "play") { update(dt); }
+    if (mode === "play") {
+      try { update(dt); }
+      catch (err) { console.error("update error", err); }   // bir hata olsa bile döngü ölmesin
+    }
     updateCamera(dt);
     draw();
     requestAnimationFrame(frame);
@@ -940,7 +865,7 @@
     if (end) {
       overlay.querySelector("h1").textContent = "🏁 MAÇ SONU";
       overlay.querySelectorAll("p")[0].innerHTML =
-        `<b style="font-size:1.3em">${title}</b><br>Skor: EV ${scoreH} - ${scoreA} DEPLASMAN`;
+        "<b style=\"font-size:1.3em\">" + title + "</b><br>Skor: EV " + scoreH + " - " + scoreA + " DEPLASMAN";
       startBtn.textContent = "TEKRAR OYNA";
       mode = "fulltime";
     }
@@ -948,7 +873,6 @@
 
   startBtn.addEventListener("click", () => { startMatch(); });
 
-  // entering menu
   mode = "menu";
 })();
 </script>
