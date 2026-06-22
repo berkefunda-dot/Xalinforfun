@@ -88,16 +88,24 @@ async function genImageLocalSD(prompt){
   if(!b64) throw new Error("SD görsel döndürmedi");
   return "data:image/png;base64,"+b64;
 }
+const GEMINI_IMG_MODELS = ["gemini-2.5-flash-image","gemini-2.5-flash-image-preview"];
 async function genImageGemini(prompt){
-  const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key="+encodeURIComponent(GEMINI_KEY);
-  const r = await fetch(url,{ method:"POST", headers:{"content-type":"application/json"},
-    body: JSON.stringify({ contents:[{ parts:[{ text:prompt }] }] }) });
-  if(!r.ok) throw new Error("Gemini "+r.status);
-  const j = await r.json();
-  const part = (j.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
-  const d = part && (part.inlineData||part.inline_data);
-  if(!d) throw new Error("Gemini görsel döndürmedi");
-  return `data:${d.mimeType||d.mime_type||"image/png"};base64,${d.data}`;
+  let lastErr;
+  for(const model of GEMINI_IMG_MODELS){
+    try{
+      const url = "https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(GEMINI_KEY);
+      const r = await fetch(url,{ method:"POST", headers:{"content-type":"application/json"},
+        body: JSON.stringify({ contents:[{ parts:[{ text:prompt }] }],
+          generationConfig:{ responseModalities:["TEXT","IMAGE"] } }) });
+      if(!r.ok){ let d=""; try{ d=(await r.json()).error?.message||""; }catch(e){} lastErr=new Error("Gemini "+r.status+": "+d); if(r.status===404) continue; throw lastErr; }
+      const j = await r.json();
+      const part = (j.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
+      const d = part && (part.inlineData||part.inline_data);
+      if(!d){ lastErr=new Error("Gemini görsel döndürmedi (kota?)"); continue; }
+      return `data:${d.mimeType||d.mime_type||"image/png"};base64,${d.data}`;
+    }catch(e){ lastErr=e; }
+  }
+  throw lastErr || new Error("Gemini görsel üretilemedi");
 }
 
 /* ---------- yönlendirme ---------- */
