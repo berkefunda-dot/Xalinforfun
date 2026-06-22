@@ -187,6 +187,17 @@
   .outcome.ok{color:var(--ok)} .outcome.partial{color:var(--warn)} .outcome.bad{color:var(--bad)}
   .modal .row{margin-top:6px}
   .whoSel{margin-bottom:14px}
+  .modalcard .avatar .face{cursor:zoom-in}
+
+  /* ---- avatar büyütme (lightbox) ---- */
+  .lightbox{position:fixed;inset:0;z-index:80;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:12px;background:rgba(8,5,4,.86);backdrop-filter:blur(4px);cursor:zoom-out;padding:24px;animation:fade .2s ease}
+  .lightbox img{max-width:min(88vw,420px);max-height:74vh;border-radius:18px;border:3px solid var(--gold);
+    box-shadow:0 24px 70px rgba(0,0,0,.65);animation:pop .25s cubic-bezier(.2,1.3,.4,1)}
+  .lightbox .nm{color:var(--ink);font-family:var(--serif);font-size:19px;
+    background:rgba(0,0,0,.5);padding:5px 16px;border-radius:999px}
+  .lightbox .hint{color:var(--muted);font-size:12px}
+  .clickav,.avprev{cursor:zoom-in}
 </style>
 </head>
 <body>
@@ -329,6 +340,13 @@
       <button class="btn" id="rollGo">🎲 Zar At</button>
     </div>
   </div>
+</div>
+
+<!-- ===================== AVATAR BÜYÜTME ===================== -->
+<div id="avLightbox" class="lightbox hidden">
+  <img id="avLightboxImg" src="" alt="avatar"/>
+  <div class="nm" id="avLightboxName"></div>
+  <div class="hint">kapatmak için tıkla</div>
 </div>
 
 <div id="toast" class="toast hidden"></div>
@@ -539,6 +557,8 @@ function renderDets(){
   host.querySelectorAll("[data-arch]").forEach(b=> b.onclick=e=>{
     const [i,k]=e.currentTarget.dataset.arch.split(":"); detDrafts[+i].arch=k; renderDets(); });
   host.querySelectorAll("[data-gen]").forEach(b=> b.onclick=()=>generateAvatarFor(+b.dataset.gen, b));
+  host.querySelectorAll("[data-av]").forEach(el=> el.onclick=()=>{
+    const d=detDrafts[+el.dataset.av]; if(d&&d.avatar) openAvatarZoom(d.avatar, d.name||"Dedektif"); });
 }
 
 /* ---------- AI avatar üretimi (setup) ---------- */
@@ -974,11 +994,21 @@ function updateRollAvatar(){
     face.textContent="";
     face.style.backgroundImage=`url("${det.avatar}")`;
     face.style.backgroundSize="cover"; face.style.backgroundPosition="center";
+    face.style.cursor="zoom-in";
+    face.onclick=()=>openAvatarZoom(det.avatar, det.name);
   } else {
     face.style.backgroundImage="";
     face.textContent=detAvatar(det);
+    face.style.cursor="default";
+    face.onclick=null;
   }
   $("rollName").textContent=det? det.name : "Dedektif";
+}
+function openAvatarZoom(src, name){
+  if(!src) return;
+  $("avLightboxImg").src=src;
+  $("avLightboxName").textContent=name||"";
+  $("avLightbox").classList.remove("hidden");
 }
 function doRoll(){
   const rr=curRoll.rr;
@@ -1018,15 +1048,17 @@ function doRoll(){
 function renderSidebars(){
   // parti & envanter
   const p=$("party");
-  p.innerHTML = S.detectives.map(d=>{
+  p.innerHTML = S.detectives.map((d,i)=>{
     const a=ARCHETYPES[d.arch];
     const sk=Object.entries(a.skills).filter(([,v])=>v>0)
       .map(([k,v])=>`<span class="pill">${SKILL_LABELS[k]} +${v}</span>`).join("");
     const av = d.avatar
-      ? `<div class="avprev" style="width:42px;height:42px;font-size:20px;background-image:url('${d.avatar}')"></div>`
-      : `<div class="avprev" style="width:42px;height:42px;font-size:20px">${detAvatar(d)}</div>`;
+      ? `<div class="avprev clickav" data-detidx="${i}" style="width:42px;height:42px;font-size:20px;background-image:url('${d.avatar}')"></div>`
+      : `<div class="avprev" style="width:42px;height:42px;font-size:20px;cursor:default">${detAvatar(d)}</div>`;
     return `<div class="ent" style="align-items:center">${av}<div><b>${esc(d.name)}</b> <span class="muted">· ${a.label}</span><br>${sk}</div></div>`;
   }).join("");
+  p.querySelectorAll(".clickav").forEach(el=> el.onclick=()=>{
+    const d=S.detectives[+el.dataset.detidx]; if(d&&d.avatar) openAvatarZoom(d.avatar, d.name); });
   if(S.inventory.length){
     p.innerHTML += `<div style="margin-top:8px"><div class="muted" style="margin-bottom:4px">Eşyalar</div>`
       + S.inventory.map(it=>`<span class="pill">🎒 ${esc(it)}</span>`).join("") + `</div>`;
@@ -1107,6 +1139,7 @@ function init(){
 
   $("aiSource").onchange=updateSourceVisibility;
   $("artMode").onchange=updateImgKeyVisibility;
+  $("avLightbox").onclick=()=>$("avLightbox").classList.add("hidden");
   $("addDet").onclick=()=>addDetDraft("");
   $("startBtn").onclick=startGame;
   $("freeBtn").onclick=()=>{ const v=$("freeInput").value.trim(); if(v){ $("freeInput").value=""; takeTurn(v); } };
