@@ -454,10 +454,14 @@ kod bloğu işareti yazma. Yanıt tek bir JSON nesnesi olmalı:
 }
 - roll_request örneği:
   { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2",
-    "on_success":"vitrindeki taşın sahte olduğunu fark edersin", "on_fail":"bir şey dikkatini çekmez, vakit kaybedersin" }
-- roll_request döndürürken on_success ve on_fail alanlarını HER ZAMAN doldur: bu denemede
-  başarı ve başarısızlığın somut sonucunu kısa, net, Türkçe bir cümleyle yaz (oyuncuya
-  riski göstermek için). Çözümü ele verme; ipucu niteliğinde tut.
+    "on_success":"Taşla ilgili gözden kaçan önemli bir ayrıntı yakalarsın", "on_fail":"Aceleyle bakar, bir şey fark etmeden vakit kaybedersin" }
+- on_success ve on_fail alanlarını HER ZAMAN doldur, AMA bunlar SPOILER İÇERMEMELİ.
+  Bu alanlar zar ATILMADAN ÖNCE oyuncuya gösterilir; bu yüzden NEYİN RİSKTE olduğunu ima eden,
+  kısa ve merak uyandıran birer cümle yaz — ama somut bulguyu, sırrı veya çözümü ASLA yazma.
+  Gerçek keşif yalnızca zar sonrası narration'da açıklanır.
+  · İYİ:  on_success "Şüphelinin anlattığı zamanlamada bir tutarsızlık sezersin"
+  · İYİ:  on_fail "Konuşma dağılır, aradığın detayı kaçırırsın"
+  · KÖTÜ (YAPMA): "Safirin sahte olduğunu anlarsın" / "Cam kesiciyi bulursun" (sırrı ele veriyor)
 - state_changes yalnızca öneridir; backend işler.
 - notes_add: oyuncuların defterine yazılacak somut ipucu/keşif cümleleri (kısa, Türkçe).
 - inventory_add: ele geçen eşyaların Görünen Adları.
