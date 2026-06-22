@@ -261,6 +261,10 @@
             <option value="off">Kapalı — sade metin</option>
           </select>
         </div>
+        <div>
+          <label>Görsel tarzı</label>
+          <select id="artStyle"></select>
+        </div>
       </div>
       <div id="imgKeyWrap" class="hidden">
         <label>Görsel API anahtarı <span class="muted" id="imgKeyHint"></span></label>
@@ -371,6 +375,7 @@ const CASES = [
   subtitle:"Fırtınalı kıyı · kayıp safir",
   style_anchor:"painterly semi-realistic, visible brushwork, warm lantern light, stormy coastal mood, light fog and grain",
   setting:"a foggy seaside lighthouse mansion at night during a storm",
+  mood:"warm lantern light, stormy coastal mood, light fog and grain",
   intro:"Fırtınalı bir gecede kıyıdaki konakta verilen davette, ailenin yadigârı \"Deniz Yıldızı\" safiri vitrinden kayboldu. Fırtına telefon hatlarını kesti; kimse sabaha kadar ayrılamıyor. Safiri şafaktan önce bulun.",
   locations:[
     {key:"giris_holu",   label:"Giriş Holü",      note:"yüksek tavan, ıslak paltolar, titreşen avize"},
@@ -411,6 +416,7 @@ ADİL İPUCU ZİNCİRİ:
   subtitle:"Tipiyle kapalı dağ oteli · kayıp madalya",
   style_anchor:"painterly semi-realistic, visible brushwork, warm fireplace glow, snowed-in alpine ski lodge interior, soft falling snow and grain",
   setting:"a snowed-in alpine ski lodge with a roaring fireplace and a snowstorm outside",
+  mood:"warm fireplace glow, snowed-in alpine, soft falling snow and grain",
   intro:"Tipi yolları kapattı, telsiz çekmiyor. Yarın sahibine verilecek \"Altın Zirve\" madalyası ödül odasının vitrininden kayboldu. Kimse dağdan inemiyor. Madalyayı kahvaltıdan önce bulun.",
   locations:[
     {key:"somine_salonu",   label:"Şömine Salonu",     note:"sıcak ahşap, çatırdayan ateş, kalın halılar"},
@@ -451,6 +457,7 @@ ADİL İPUCU ZİNCİRİ:
   subtitle:"Galadan sonra kilitli müze · değiştirilen heykel",
   style_anchor:"painterly semi-realistic, visible brushwork, cool moonlight through tall windows, grand marble museum at night, soft dust motes and grain",
   setting:"a grand museum at night after a gala, marble halls lit by moonlight",
+  mood:"cool moonlight through tall windows, marble museum at night, soft dust motes and grain",
   intro:"Gala bitti, kapılar sabaha dek kilitli. Sergideki ünlü \"Gümüş Baykuş\" heykelciği yerinden gitti; yerinde bir kopya duruyor gibi. Baykuşu sabah olmadan bulun ve gerçeği ortaya çıkarın.",
   locations:[
     {key:"ana_galeri",        label:"Ana Galeri",        note:"mermer zemin, baykuşun boş vitrini"},
@@ -491,6 +498,7 @@ ADİL İPUCU ZİNCİRİ:
   subtitle:"Açılış gecesi · kaybolan uğurlu küre",
   style_anchor:"painterly semi-realistic, visible brushwork, warm carnival string lights at dusk, cozy seaside funfair, gentle sea breeze and grain",
   setting:"a cozy seaside carnival at dusk with warm string lights and a Ferris wheel",
+  mood:"warm carnival string lights at dusk, seaside funfair, gentle sea breeze and grain",
   intro:"Lunaparkın açılış gecesi! Falcı çadırındaki uğurlu \"Ay Taşı\" küresi sahneden kayboldu; onsuz büyük çekiliş yapılamıyor. Park bir saatliğine kapalı. Küreyi çekilişten önce bulun. (Bu vaka en küçükler için en yumuşak olanıdır.)",
   locations:[
     {key:"falci_cadiri",  label:"Falcı Çadırı",   note:"mor kumaşlar; kürenin kaybolduğu yer"},
@@ -531,6 +539,25 @@ ADİL İPUCU ZİNCİRİ:
 function caseById(id){ return CASES.find(c=>c.id===id) || CASES[0]; }
 let selectedCaseId = CASES[0].id;
 function activeCase(){ return (S && S.case) ? S.case : caseById(selectedCaseId); }
+
+// Görsel tarzı (oyun başında seçilir). "auto" = vakanın kendi tarzı.
+const ART_STYLES = {
+  auto:      {label:"Otomatik (vakaya göre) ⭐", anchor:null},
+  painterly: {label:"Resimsel / yağlıboya", anchor:"painterly semi-realistic, visible brushwork, oil texture, soft cinematic light, light grain"},
+  anime:     {label:"Anime / çizgi film",   anchor:"soft anime illustration, clean cel shading, expressive, studio-quality"},
+  watercolor:{label:"Suluboya masal",       anchor:"watercolor storybook illustration, soft washes, gentle linework, dreamy"},
+  comic:     {label:"Çizgi roman",          anchor:"bold ink comic / graphic-novel style, dramatic inked shading, halftone, high contrast"},
+  realistic: {label:"Sinematik gerçekçi",   anchor:"photorealistic, cinematic lighting, highly detailed, dramatic atmosphere"},
+  gothic:    {label:"Karanlık gotik",       anchor:"dark gothic etching, moody chiaroscuro, eerie, muted desaturated palette"},
+  pixel:     {label:"Piksel / retro oyun",  anchor:"detailed pixel art, 16-bit retro game style, crisp dithering"},
+};
+function styleAnchor(){
+  const id = (S && S.cfg && S.cfg.artStyle) || ($("artStyle") ? $("artStyle").value : "auto");
+  const c = activeCase();
+  const st = ART_STYLES[id];
+  if(!st || !st.anchor) return c.style_anchor;        // auto → vakanın hazır tarzı
+  return `${st.anchor}, ${c.mood || ""}`;             // seçili stil + vakanın atmosferi
+}
 
 /* ---------- 2. DM SİSTEM PROMPT'U (dm_system_prompt.md) ---------- */
 
@@ -713,7 +740,7 @@ function avatarPrompt(traits){
     + `Head-and-shoulders character portrait of a young amateur detective`
     + (t ? ` with exactly these features: ${t}. ` : `. `)
     + `Single character, facing the viewer, cozy mystery storybook mood, soft lantern light. `
-    + `Setting: ${activeCase().setting}. Style: ${activeCase().style_anchor}. `
+    + `Setting: ${activeCase().setting}. Style: ${styleAnchor()}. `
     + `No text, no letters, no words, no captions.`;
 }
 async function genAvatarImage(traits, cfg){
@@ -755,6 +782,8 @@ function loadCfg(){
   if(c.apiKey) $("apiKey").value=c.apiKey;
   if(c.model) $("model").value=c.model;
   $("artMode").value = c.artMode || "pollinations";
+  $("artStyle").innerHTML = Object.entries(ART_STYLES).map(([k,s])=>`<option value="${k}">${s.label}</option>`).join("");
+  $("artStyle").value = (c.artStyle && ART_STYLES[c.artStyle]) ? c.artStyle : "auto";
   if(c.imgKey) $("imgKey").value=c.imgKey;
   if(c.caseId && caseById(c.caseId)) selectedCaseId=c.caseId;
   updateImgKeyVisibility();
@@ -762,7 +791,7 @@ function loadCfg(){
 }
 function readCfg(){
   return { aiSource:$("aiSource").value, apiKey:$("apiKey").value.trim(), model:$("model").value,
-    artMode:$("artMode").value, imgKey:$("imgKey").value.trim(), caseId:selectedCaseId };
+    artMode:$("artMode").value, artStyle:$("artStyle").value, imgKey:$("imgKey").value.trim(), caseId:selectedCaseId };
 }
 function updateSourceVisibility(){
   const local = $("aiSource").value==="local";
@@ -958,7 +987,7 @@ function renderScene(image){
   $("sceneLoc").textContent = ent ? ent.label : "Sisli Fener Konağı";
   $("sceneShot").textContent = image.shot || "wide";
   const art=$("sceneArt");
-  art.title = activeCase().style_anchor;
+  art.title = styleAnchor();
   // taban: her zaman atmosferik degrade (yüklenirken / sağlayıcı yokken / hata olunca)
   art.style.backgroundImage = gradientFor(key);
   art.style.backgroundSize = "cover";
@@ -1005,7 +1034,7 @@ function buildImagePrompt(image){
   if(ent && ent.type==="npc") subject = `a person: ${ent.label}${ent.note? ", "+ent.note:""}`;
   else if(ent) subject = `${ent.label}${ent.note? " — "+ent.note:""}`;
   else subject = activeCase().setting;
-  return `${activeCase().style_anchor}. ${shot} of ${subject}. Cozy mystery storybook atmosphere, `
+  return `${styleAnchor()}. ${shot} of ${subject}. Cozy mystery storybook atmosphere, `
     + `evocative but not frightening, family-friendly. No text, no letters, no words, no captions in the image.`;
 }
 async function generateImage(image, provider, key){
