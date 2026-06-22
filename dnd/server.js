@@ -88,16 +88,33 @@ async function genImageLocalSD(prompt){
   if(!b64) throw new Error("SD görsel döndürmedi");
   return "data:image/png;base64,"+b64;
 }
-const GEMINI_IMG_MODELS = ["gemini-2.5-flash-image","gemini-2.5-flash-image-preview"];
+let _gemImgModels = null;
+async function geminiImageModels(){
+  if(_gemImgModels) return _gemImgModels;
+  const fallback = ["gemini-2.5-flash-image","gemini-2.5-flash-image-preview",
+    "gemini-2.0-flash-preview-image-generation","gemini-2.0-flash-exp-image-generation"];
+  try{
+    const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000&key="+encodeURIComponent(GEMINI_KEY));
+    if(r.ok){
+      const j = await r.json();
+      const found = (j.models||[])
+        .filter(m=>/image/i.test(m.name) && (m.supportedGenerationMethods||[]).includes("generateContent"))
+        .map(m=>m.name.replace(/^models\//,""));
+      if(found.length){ _gemImgModels=found; return found; }
+    }
+  }catch(e){}
+  return fallback;
+}
 async function genImageGemini(prompt){
+  const models = await geminiImageModels();
   let lastErr;
-  for(const model of GEMINI_IMG_MODELS){
+  for(const model of models){
     try{
       const url = "https://generativelanguage.googleapis.com/v1beta/models/"+model+":generateContent?key="+encodeURIComponent(GEMINI_KEY);
       const r = await fetch(url,{ method:"POST", headers:{"content-type":"application/json"},
         body: JSON.stringify({ contents:[{ parts:[{ text:prompt }] }],
           generationConfig:{ responseModalities:["TEXT","IMAGE"] } }) });
-      if(!r.ok){ let d=""; try{ d=(await r.json()).error?.message||""; }catch(e){} lastErr=new Error("Gemini "+r.status+": "+d); if(r.status===404) continue; throw lastErr; }
+      if(!r.ok){ let d=""; try{ d=(await r.json()).error?.message||""; }catch(e){} lastErr=new Error("Gemini "+r.status+": "+d); if(r.status===404||r.status===400) continue; throw lastErr; }
       const j = await r.json();
       const part = (j.candidates?.[0]?.content?.parts||[]).find(p=>p.inlineData||p.inline_data);
       const d = part && (part.inlineData||part.inline_data);
