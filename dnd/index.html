@@ -562,16 +562,25 @@ async function generateAvatarFor(i, btn){
     btn.disabled=false; btn.textContent=old;
   }
 }
-async function genAvatarImage(traits, cfg){
-  const prompt = `${STYLE_ANCHOR}. Character portrait, head and shoulders, of a young amateur detective `
+function avatarPrompt(traits){
+  return `${STYLE_ANCHOR}. Character portrait, head and shoulders, of a young amateur detective `
     + `in a cozy family mystery set in a foggy seaside lighthouse mansion at night. `
     + (traits ? `Appearance and personality: ${traits}. ` : "")
     + `Warm, friendly, storybook mood, period-appropriate cozy attire, soft lantern light. `
     + `Single character, facing viewer. No text, no letters, no words, no captions in the image.`;
-  if(cfg.artMode==="pollinations") return genPollinations(prompt, 640, 640, Math.floor(Math.random()*1000000));
-  if(cfg.artMode==="server") return genServer(prompt);
-  if(cfg.artMode==="openai") return genOpenAI(prompt, cfg.imgKey);
-  return genGemini(prompt, cfg.imgKey);
+}
+async function genAvatarImage(traits, cfg){
+  const prompt = avatarPrompt(traits);
+  const seed = Math.floor(Math.random()*1000000);
+  try{
+    if(cfg.artMode==="pollinations") return await genPollinations(prompt, 640, 640, seed);
+    if(cfg.artMode==="server") return await genServer(prompt);
+    if(cfg.artMode==="openai") return await genOpenAI(prompt, cfg.imgKey);
+    return await genGemini(prompt, cfg.imgKey);
+  }catch(e){
+    if(cfg.artMode!=="pollinations"){ toast("Seçili sağlayıcı başarısız oldu; ücretsiz Pollinations'a geçildi."); return genPollinations(prompt, 640, 640, seed); }
+    throw e;
+  }
 }
 function downscaleDataUrl(dataUrl, size){
   return new Promise((resolve,reject)=>{
@@ -848,9 +857,16 @@ function buildImagePrompt(image){
 }
 async function generateImage(image, provider, key){
   const prompt = buildImagePrompt(image);
-  if(provider==="pollinations") return genPollinations(prompt, 768, 512, seedFor(image.primary_entity_key+":"+image.shot));
-  if(provider==="server") return genServer(prompt);
-  return provider==="openai" ? genOpenAI(prompt, key) : genGemini(prompt, key);
+  const seed = seedFor(image.primary_entity_key+":"+image.shot);
+  try{
+    if(provider==="pollinations") return await genPollinations(prompt, 768, 512, seed);
+    if(provider==="server") return await genServer(prompt);
+    if(provider==="openai") return await genOpenAI(prompt, key);
+    return await genGemini(prompt, key);
+  }catch(e){
+    if(provider!=="pollinations") return genPollinations(prompt, 768, 512, seed); // ücretsiz yedek
+    throw e;
+  }
 }
 function seedFor(str){ let h=0; for(const c of (str||"x")) h=(h*31+c.charCodeAt(0))>>>0; return h%1000000; }
 function genPollinations(prompt, w, h, seed){
