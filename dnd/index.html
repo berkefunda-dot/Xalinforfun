@@ -207,8 +207,19 @@
         kimse sabaha kadar ayrılamıyor. Siz dedektifsiniz — safiri şafaktan önce bulun.
       </p>
 
-      <label>Anthropic API anahtarı <span class="muted">(tarayıcında saklanır, kimseyle paylaşılmaz)</span></label>
-      <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      <label>Anlatıcı (DM) kaynağı</label>
+      <select id="aiSource">
+        <option value="local">Yerel sunucu — Claude planım (ücretsiz)</option>
+        <option value="api">Claude API — anahtarımla (ücretli)</option>
+      </select>
+      <div id="apiKeyWrap">
+        <label>Anthropic API anahtarı <span class="muted">(tarayıcında saklanır, kimseyle paylaşılmaz)</span></label>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      </div>
+      <div id="localHint" class="muted hidden" style="margin-top:6px">
+        Bu mod yalnızca <code>node server.js</code> ile açtığında çalışır; DM yanıtları giriş yapmış
+        Claude Code aboneliğinden üretilir, API ücreti çıkmaz.
+      </div>
       <div class="row" style="margin-top:8px">
         <div>
           <label>Anlatıcı modeli</label>
@@ -222,8 +233,9 @@
           <label>Görsel sahne kartı</label>
           <select id="artMode">
             <option value="gradient">Atmosferik renk — bedava</option>
-            <option value="gemini">Gemini görsel (önerilen)</option>
-            <option value="openai">OpenAI görsel</option>
+            <option value="server">Yerel sunucu (SD / Gemini)</option>
+            <option value="gemini">Gemini görsel (tarayıcıdan)</option>
+            <option value="openai">OpenAI görsel (tarayıcıdan)</option>
             <option value="off">Kapalı — sade metin</option>
           </select>
         </div>
@@ -524,18 +536,27 @@ function renderDets(){
     const [i,k]=e.currentTarget.dataset.arch.split(":"); detDrafts[+i].arch=k; renderDets(); });
 }
 
+const IS_LOCAL = ["localhost","127.0.0.1",""].includes(location.hostname);
 function loadCfg(){
-  try{ const c=JSON.parse(localStorage.getItem(LS_CFG)||"{}");
-    if(c.apiKey) $("apiKey").value=c.apiKey;
-    if(c.model) $("model").value=c.model;
-    if(c.artMode) $("artMode").value=c.artMode;
-    if(c.imgKey) $("imgKey").value=c.imgKey;
-  }catch(e){}
+  let c={};
+  try{ c=JSON.parse(localStorage.getItem(LS_CFG)||"{}"); }catch(e){}
+  // varsayılan kaynak: yerel sunucudan açıldıysa "local", yoksa "api"
+  $("aiSource").value = c.aiSource || (IS_LOCAL ? "local" : "api");
+  if(c.apiKey) $("apiKey").value=c.apiKey;
+  if(c.model) $("model").value=c.model;
+  $("artMode").value = c.artMode || (IS_LOCAL ? "server" : "gradient");
+  if(c.imgKey) $("imgKey").value=c.imgKey;
   updateImgKeyVisibility();
+  updateSourceVisibility();
 }
 function readCfg(){
-  return { apiKey:$("apiKey").value.trim(), model:$("model").value,
+  return { aiSource:$("aiSource").value, apiKey:$("apiKey").value.trim(), model:$("model").value,
     artMode:$("artMode").value, imgKey:$("imgKey").value.trim() };
+}
+function updateSourceVisibility(){
+  const local = $("aiSource").value==="local";
+  $("apiKeyWrap").classList.toggle("hidden", local);
+  $("localHint").classList.toggle("hidden", !local);
 }
 function updateImgKeyVisibility(){
   const m=$("artMode").value, wrap=$("imgKeyWrap");
@@ -565,6 +586,7 @@ function buildContextBlock(playerAction){
 
 async function callDM(playerAction){
   const sys = DM_SYSTEM + "\n\n# ----- BU TURUN BAĞLAMI -----\n" + buildContextBlock(playerAction);
+  if(S.cfg.aiSource==="local") return callDMLocal(sys);
   const body = {
     model: S.cfg.model,
     max_tokens: 1100,
@@ -591,6 +613,18 @@ async function callDM(playerAction){
   const data = await res.json();
   let text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
   return parseDMJson(text);
+}
+
+async function callDMLocal(sys){
+  const prompt = sys
+    + "\n\n# GÖREV\nYukarıdaki BU TURUN BAĞLAMI ve PLAYER_ACTION'a göre Anlatıcı olarak tek bir tur üret. "
+    + "Hiçbir araç kullanma; dosya okuma/yazma; başka bir şey yapma. "
+    + "Yanıtın SADECE belirtilen şemada geçerli bir JSON nesnesi olsun — başına/sonuna metin, açıklama veya ``` ekleme.";
+  const r = await fetch("/api/dm",{ method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({ prompt, model:S.cfg.model }) });
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok || !j.ok) throw new Error(j.error || ("Yerel sunucu hatası "+r.status+". 'node server.js' çalışıyor mu?"));
+  return parseDMJson(j.result);
 }
 
 function parseDMJson(text){
@@ -715,8 +749,8 @@ function renderScene(image){
   art.style.backgroundPosition = "center";
   art.classList.remove("loading");
 
-  if(mode!=="gemini" && mode!=="openai") return;          // sadece degrade
-  if(!S.cfg.imgKey){ return; }                            // anahtar yok → degrade kalsın
+  if(mode!=="gemini" && mode!=="openai" && mode!=="server") return;   // sadece degrade
+  if((mode==="gemini"||mode==="openai") && !S.cfg.imgKey) return;     // anahtar yok → degrade kalsın
   const cacheKey = key+":"+(image.shot||"wide");
   if(imgCache[cacheKey]){ setSceneImage(imgCache[cacheKey], cacheKey); return; }
 
@@ -760,7 +794,15 @@ function buildImagePrompt(image){
 }
 async function generateImage(image, provider, key){
   const prompt = buildImagePrompt(image);
+  if(provider==="server") return genServer(prompt);
   return provider==="openai" ? genOpenAI(prompt, key) : genGemini(prompt, key);
+}
+async function genServer(prompt){
+  const r = await fetch("/api/image",{ method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({ prompt }) });
+  let j={}; try{ j=await r.json(); }catch(e){}
+  if(!r.ok || !j.ok) throw new Error(j.error || ("Sunucu görseli "+r.status));
+  return j.dataUrl;
 }
 async function genGemini(prompt, key){
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${encodeURIComponent(key)}`;
@@ -910,7 +952,7 @@ function loadSave(){ try{ const r=localStorage.getItem(LS_KEY); return r? JSON.p
 function startGame(){
   const cfg=readCfg();
   $("setupErr").textContent="";
-  if(!cfg.apiKey){ $("setupErr").textContent="API anahtarı gerekli."; return; }
+  if(cfg.aiSource==="api" && !cfg.apiKey){ $("setupErr").textContent="API anahtarı gerekli (ya da 'Yerel sunucu' modunu seç)."; return; }
   const dets = detDrafts.filter(d=>d.name.trim()).map(d=>({name:d.name.trim(), arch:d.arch}));
   if(dets.length===0){ $("setupErr").textContent="En az bir dedektif adı girin."; return; }
   localStorage.setItem(LS_CFG, JSON.stringify(cfg));
@@ -921,7 +963,7 @@ function startGame(){
   takeTurn(""); // açılış sahnesi
 }
 function resumeGame(saved){
-  S=saved; S.cfg=readCfg().apiKey? readCfg() : S.cfg; // anahtarı güncel tut
+  S=saved; S.cfg=readCfg(); // ayarları (kaynak/anahtar/model) güncel tut
   $("setup").classList.add("hidden"); $("game").classList.remove("hidden");
   $("btnReset").classList.remove("hidden");
   renderSidebars();
@@ -946,6 +988,7 @@ function init(){
   loadCfg();
   if(detDrafts.length===0){ addDetDraft(""); addDetDraft(""); } // 2 boş dedektif (iki kardeş)
 
+  $("aiSource").onchange=updateSourceVisibility;
   $("artMode").onchange=updateImgKeyVisibility;
   $("addDet").onclick=()=>addDetDraft("");
   $("startBtn").onclick=startGame;
@@ -972,7 +1015,7 @@ function init(){
         <button class="btn ghost" id="discardBtn">Sil, baştan başla</button>
       </div>`;
     $("setup").prepend(c);
-    $("resumeBtn").onclick=()=>{ const cfg=readCfg(); if(!cfg.apiKey){ toast("Önce API anahtarını gir."); return;} resumeGame(saved); };
+    $("resumeBtn").onclick=()=>{ const cfg=readCfg(); if(cfg.aiSource==="api" && !cfg.apiKey){ toast("Önce API anahtarını gir (ya da Yerel sunucu modu)."); return;} resumeGame(saved); };
     $("discardBtn").onclick=()=>{ localStorage.removeItem(LS_KEY); c.remove(); };
   }
 }

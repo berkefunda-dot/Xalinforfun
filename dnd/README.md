@@ -6,7 +6,48 @@ konağından kaybolan **"Deniz Yıldızı" safirini** şafaktan önce bulmaya ç
 
 Tek bir `index.html` dosyası — sunucu yok. Tarayıcıdan doğrudan Claude API'sini çağırır.
 
-## Oynamak için
+## 🆓 Yerel ücretsiz mod (Claude planınla — API ücreti yok)
+
+DM yanıtlarını, giriş yapmış olduğun **Claude Code aboneliğin** üzerinden ürettirebilirsin;
+böylece ayrı bir Anthropic API anahtarına ve **API ücretine gerek kalmaz**.
+
+**Gerekenler:** Node.js + Claude Code CLI (`claude`) kurulu ve giriş yapmış olmalı (`claude` çalışıyorsa tamam).
+
+```bash
+cd dnd
+node server.js          # → http://127.0.0.1:8787/
+```
+Windows'ta `dnd/start-local.cmd` dosyasına çift tıklamak da yeterli.
+
+Açılan sayfada **Anlatıcı kaynağı → "Yerel sunucu — Claude planım"** seçili olur (yerelde varsayılan).
+Sunucu, her tur `claude` CLI'yi başsız (headless) çalıştırır; yanıt abonelik kapsamında üretilir.
+
+> **Nasıl çalışır:** Tarayıcı `/api/dm`'e POST atar → sunucu `claude -p --output-format json --model …`
+> komutunu çalıştırır (büyük sistem+bağlam metni stdin ile gönderilir) → dönen JSON tarayıcıya iletilir.
+> API anahtarı kullanılmaz; kimlik doğrulama `claude`'un kayıtlı oturumundan gelir.
+
+### Görseller ücretsiz mi?
+Claude (ne API ne abonelik) **görsel üretmez**. Görselde üç ücretsiz/yarı-ücretsiz yol var:
+
+| Ayar | Maliyet | Kurulum |
+|---|---|---|
+| **Atmosferik renk** (degrade) | bedava | yok — varsayılan |
+| **Yerel sunucu → Stable Diffusion** | bedava (kendi bilgisayarın) | AUTOMATIC1111'i `--api` ile çalıştır, sonra `SD_URL=http://127.0.0.1:7860 node server.js` |
+| **Yerel sunucu → Gemini** | ücretsiz kota dahilinde | `GEMINI_KEY=... node server.js` |
+
+Ayarlarda **Görsel sahne kartı → "Yerel sunucu (SD / Gemini)"** seç; sunucu hangisi tanımlıysa onu kullanır,
+yoksa otomatik degradeye düşer.
+
+PowerShell'de ortam değişkeniyle başlatma:
+```powershell
+$env:SD_URL="http://127.0.0.1:7860"; node server.js
+# veya
+$env:GEMINI_KEY="AIza..."; node server.js
+```
+
+---
+
+## Oynamak için (API anahtarıyla, çevrimiçi)
 
 1. [Oyunu aç](https://berkefunda-dot.github.io/Xalinforfun/dnd/) (GitHub Pages açıkça) ya da
    `dnd/index.html` dosyasını tarayıcıda çift tıklayarak aç.
