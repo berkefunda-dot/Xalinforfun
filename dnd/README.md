@@ -87,8 +87,20 @@ gizli tutmak isterseniz, vaka dosyasını sunucu tarafında tutan bir backend ge
 Her tur bir Claude API çağrısıdır (~1–2K token). Sonnet 4.6 dengeli; Haiku 4.5 daha ucuz ve
 hızlı; Opus 4.8 en yetenekli. Modeli ayarlardan seçebilirsiniz.
 
-## Yeni vaka eklemek
+## Vakalar / temalar
 
-`index.html` içindeki `SEED_LOCATIONS / SEED_NPCS / SEED_ITEMS` ve `CASE_BIBLE_PRIVATE`
-bloklarını yeni bir vakayla değiştirmen yeterli. DM sistem prompt'u (`DM_SYSTEM`) tür
-değişmedikçe aynı kalır.
+Oyun başında **macera seçilir**. Dahili vakalar (hepsi aynı motoru kullanır, yalnız içerik + görsel teması değişir):
+
+- 🔍 **Sisli Fener Konağı** — fırtınalı kıyı konağı, kayıp safir (açgözlülük)
+- 🏔️ **Kar Mahsuru: Zirve Oteli** — tipiyle kapalı dağ oteli, kayıp madalya (sponsor baskısı)
+- 🦉 **Gece Müzesi** — galadan sonra kilitli müze, değiştirilen heykel (örtbas/korku)
+- 🎡 **Sahil Lunaparkı** — açılış gecesi, kaybolan uğurlu küre (masum bir çocuk — en yumuşak vaka)
+
+Her vakanın kendi mekânları, kişileri, görsel tarzı (`style_anchor`) ve gizli çözümü (`caseBible`) vardır.
+
+### Yeni vaka eklemek
+
+`index.html` içindeki `CASES` dizisine yeni bir nesne ekle: `{id, emoji, title, subtitle,
+style_anchor, setting, intro, locations[], npcs[], items[], caseBible}`. Diğer vakalarla aynı
+yapıyı izle (adil ipucu zinciri + 2 şaşırtmaca + çözüm koşulu + `case_solved` flag'i). DM sistem
+prompt'u (`DM_SYSTEM`) ve motor değişmez.

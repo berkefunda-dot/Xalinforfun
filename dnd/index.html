@@ -66,6 +66,12 @@
   .det .archs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .arch{flex:1;min-width:130px;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;background:#15100c}
   .arch.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .cases{display:flex;gap:8px;flex-wrap:wrap}
+  .case-card{flex:1;min-width:150px;border:1px solid var(--line);border-radius:12px;padding:11px;cursor:pointer;background:#15100c;transition:border-color .15s}
+  .case-card.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .case-card .em{font-size:22px}
+  .case-card b{display:block;color:var(--gold);font-size:14px;margin-top:3px}
+  .case-card small{color:var(--muted);font-size:11px}
   .avprev{width:52px;height:52px;border-radius:50%;flex:none;background:#15100c;border:2px solid var(--gold-dim);
     background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:24px}
   .dtraits{font-size:14px}
@@ -204,7 +210,7 @@
 <div class="wrap">
   <div class="topbar">
     <div>
-      <div class="title">🔍 Sisli Fener Konağı</div>
+      <div class="title" id="gameTitle">🔍 Sisli Fener Konağı</div>
       <div class="sub">Aile dedektif gizemi · şiddetsiz · 11+ yaş</div>
     </div>
     <div class="spacer"></div>
@@ -215,13 +221,13 @@
   <!-- ===================== SETUP ===================== -->
   <div id="setup">
     <div class="card">
-      <h2 style="color:var(--gold)">Davete Hoş Geldiniz</h2>
-      <p class="muted" style="margin-top:6px">
-        Fırtınalı bir gecede, kıyıdaki konakta verilen davette ailenin yadigârı
-        <b>"Deniz Yıldızı" safiri</b> vitrinden kayboldu. Fırtına telefon hatlarını kesti;
-        kimse sabaha kadar ayrılamıyor. Siz dedektifsiniz — safiri şafaktan önce bulun.
-      </p>
+      <h2 style="color:var(--gold)">🗺️ Macera Seç</h2>
+      <div id="caseChoices" class="cases" style="margin-top:10px"></div>
+      <p class="muted" id="caseIntro" style="margin-top:12px"></p>
+    </div>
 
+    <div class="card">
+      <h2 style="color:var(--gold)">Ayarlar</h2>
       <label>Anlatıcı (DM) kaynağı</label>
       <select id="aiSource">
         <option value="local">Yerel sunucu — Claude planım (ücretsiz)</option>
@@ -357,68 +363,174 @@
    DM mantığı seed_pilot_case.md + dm_system_prompt.md'ye dayanır.
    ================================================================= */
 
-/* ---------- 1. VAKA VERİSİ (seed_pilot_case.md) ---------- */
+/* ---------- 1. VAKA PAKETLERİ (motor aynı; yalnız içerik değişir) ---------- */
 
-const STYLE_ANCHOR =
-  "painterly semi-realistic, visible brushwork, warm lantern light, stormy coastal mood, light fog and grain";
-
-// Açık seed — oyunculara görünür, registry'ye girer
-const SEED_LOCATIONS = [
-  {key:"giris_holu",   label:"Giriş Holü",      note:"yüksek tavan, ıslak paltolar, titreşen avize"},
-  {key:"yemek_salonu", label:"Yemek Salonu",    note:"safirin kaybolduğu yer; boş vitrin, dağılmış sofra"},
-  {key:"kutuphane",    label:"Kütüphane",       note:"şömine, tozlu kitaplar, deri koltuklar"},
-  {key:"fener_kulesi", label:"Fener Kulesi",    note:"dönen ışık, demir merdiven, fırtına manzarası"},
-  {key:"bahce_ve_iskele",label:"Bahçe ve İskele",note:"yağmurda çamurlu patika, bağlı bir kayık"},
-  {key:"hizmet_koridoru",label:"Hizmet Koridoru",note:"dar geçit, anahtarlık, kiler kapısı"},
-];
-const SEED_NPCS = [
-  {key:"ev_sahibesi_leyla",label:"Leyla Hanım",        note:"konağın sahibesi; safir ailesinin yadigârı, çok üzgün"},
-  {key:"eksper_kemal",     label:"Sanat Eksperi Kemal",note:"safiri \"değerlemek için\" davet edilmiş; kibar, ölçülü"},
-  {key:"kaptan_riza",      label:"Kaptan Rıza",        note:"eski bir deniz kaptanı, davetli; sert ama dürüst görünüyor"},
-  {key:"hizmetci_nare",    label:"Hizmetçi Nare",      note:"sofrayı o kurdu; gergin, az konuşuyor"},
-  {key:"yegen_can",        label:"Yeğen Can",          note:"Leyla Hanım'ın yeğeni; borçlu olduğu söyleniyor, huzursuz"},
-];
-const SEED_ITEMS = [
-  {key:"vitrin_safir",   label:"Vitrindeki Safir", note:"yemek salonu; dikkatli bakışta \"fazla kusursuz\" görünür"},
-  {key:"islak_semsiye",  label:"Islak Şemsiye",    note:"giriş holü; kime ait olduğu sorgulanabilir"},
-  {key:"camurlu_ayak_izi",label:"Çamurlu Ayak İzi",note:"bahçe/iskele ile hol arası"},
-  {key:"yirtik_eldiven", label:"Yırtık Eldiven",   note:"hizmet koridoru"},
-  {key:"cam_kesici",     label:"İnce Cam Kesici",  note:"gizlilik/ikna ile bir şüphelinin yanında bulunur"},
-  {key:"borc_mektubu",   label:"Borç Mektubu",     note:"kütüphanede bir kitabın arasında"},
-];
-
-// === GİZLİ VAKA DOSYASI (CASE_BIBLE_PRIVATE) — ASLA arayüzde gösterilmez ===
-const CASE_BIBLE_PRIVATE = `
+const CASES = [
+{
+  id:"fener_konagi", emoji:"🔍", title:"Sisli Fener Konağı",
+  subtitle:"Fırtınalı kıyı · kayıp safir",
+  style_anchor:"painterly semi-realistic, visible brushwork, warm lantern light, stormy coastal mood, light fog and grain",
+  setting:"a foggy seaside lighthouse mansion at night during a storm",
+  intro:"Fırtınalı bir gecede kıyıdaki konakta verilen davette, ailenin yadigârı \"Deniz Yıldızı\" safiri vitrinden kayboldu. Fırtına telefon hatlarını kesti; kimse sabaha kadar ayrılamıyor. Safiri şafaktan önce bulun.",
+  locations:[
+    {key:"giris_holu",   label:"Giriş Holü",      note:"yüksek tavan, ıslak paltolar, titreşen avize"},
+    {key:"yemek_salonu", label:"Yemek Salonu",    note:"safirin kaybolduğu yer; boş vitrin, dağılmış sofra"},
+    {key:"kutuphane",    label:"Kütüphane",       note:"şömine, tozlu kitaplar, deri koltuklar"},
+    {key:"fener_kulesi", label:"Fener Kulesi",    note:"dönen ışık, demir merdiven, fırtına manzarası"},
+    {key:"bahce_ve_iskele",label:"Bahçe ve İskele",note:"yağmurda çamurlu patika, bağlı bir kayık"},
+    {key:"hizmet_koridoru",label:"Hizmet Koridoru",note:"dar geçit, anahtarlık, kiler kapısı"},
+  ],
+  npcs:[
+    {key:"ev_sahibesi_leyla",label:"Leyla Hanım",        note:"konağın sahibesi; safir ailesinin yadigârı, çok üzgün"},
+    {key:"eksper_kemal",     label:"Sanat Eksperi Kemal",note:"safiri \"değerlemek için\" davet edilmiş; kibar, ölçülü"},
+    {key:"kaptan_riza",      label:"Kaptan Rıza",        note:"eski bir deniz kaptanı, davetli; sert ama dürüst görünüyor"},
+    {key:"hizmetci_nare",    label:"Hizmetçi Nare",      note:"sofrayı o kurdu; gergin, az konuşuyor"},
+    {key:"yegen_can",        label:"Yeğen Can",          note:"Leyla Hanım'ın yeğeni; borçlu olduğu söyleniyor, huzursuz"},
+  ],
+  items:[
+    {key:"vitrin_safir",   label:"Vitrindeki Safir", note:"yemek salonu; dikkatli bakışta \"fazla kusursuz\" görünür"},
+    {key:"islak_semsiye",  label:"Islak Şemsiye",    note:"giriş holü; kime ait olduğu sorgulanabilir"},
+    {key:"camurlu_ayak_izi",label:"Çamurlu Ayak İzi",note:"bahçe/iskele ile hol arası"},
+    {key:"yirtik_eldiven", label:"Yırtık Eldiven",   note:"hizmet koridoru"},
+    {key:"cam_kesici",     label:"İnce Cam Kesici",  note:"gizlilik/ikna ile bir şüphelinin yanında bulunur"},
+    {key:"borc_mektubu",   label:"Borç Mektubu",     note:"kütüphanede bir kitabın arasında"},
+  ],
+  caseBible:`
 FAIL: eksper_kemal (Sanat Eksperi Kemal).
+YÖNTEM: Kemal davet sırasında vitrindeki gerçek safiri ustalıkla sahte bir cam taşla değiştirdi; gerçeğini iç cebinde sakladı. Fırtınanın hatları keseceğini biliyordu; planı sabah "incelemek üzere" taşı çıkarmaktı. Vitrin camını ince bir cam kesiciyle açtı.
+SEBEP: Kemal'in ödenmemiş borçları var (borc_mektubu ONA ait, ama başkasınınmış gibi bırakılmış). Safiri bir koleksiyoncuya satacaktı. (sebep: açgözlülük/borç)
+ADİL İPUCU ZİNCİRİ:
+1. vitrin_safir SAHTE — gozlem/bilgi başarılıysa taşın fazla kusursuz, çizik/iç kusur barındırmadığı fark edilir.
+2. cam_kesici Kemal'in yanında bulunur (gizlilik/ikna). Bir ekspertizde böyle alete gerek yoktur.
+3. ZAMAN: Kemal fırtınadan ÖNCE geldiğini söyler; ama islak_semsiye ve camurlu_ayak_izi sonra geldiğini gösterir (cikarim).
+ŞAŞIRTMACALAR: yegen_can borçlu görünür ama masumdur (borcunu kapatmış, itiraf etmeye çekiniyordu). hizmetci_nare'nin yirtik_eldiven'i kırılan bardaktan; safirle ilgisi yok.
+ÇÖZÜM KOŞULU: (1) sahte safir + (2) cam kesici + (3) zaman tutarsızlığından ≥2'sini birleştirip eksper_kemal'i BORÇ sebebiyle suçla → çözüldü. Tek ipucu/şaşırtmaca yetersiz; "kanıtınız zayıf" de. Çözülünce flags_set:{"case_solved":true} ve finali oyna.`.trim()
+},
+{
+  id:"zirve_oteli", emoji:"🏔️", title:"Kar Mahsuru: Zirve Oteli",
+  subtitle:"Tipiyle kapalı dağ oteli · kayıp madalya",
+  style_anchor:"painterly semi-realistic, visible brushwork, warm fireplace glow, snowed-in alpine ski lodge interior, soft falling snow and grain",
+  setting:"a snowed-in alpine ski lodge with a roaring fireplace and a snowstorm outside",
+  intro:"Tipi yolları kapattı, telsiz çekmiyor. Yarın sahibine verilecek \"Altın Zirve\" madalyası ödül odasının vitrininden kayboldu. Kimse dağdan inemiyor. Madalyayı kahvaltıdan önce bulun.",
+  locations:[
+    {key:"somine_salonu",   label:"Şömine Salonu",     note:"sıcak ahşap, çatırdayan ateş, kalın halılar"},
+    {key:"odul_odasi",      label:"Ödül Odası",        note:"madalyanın kaybolduğu boş vitrin"},
+    {key:"kayak_deposu",    label:"Kayak Deposu",      note:"ıslak botlar, kayaklar, cila kokusu"},
+    {key:"otel_mutfagi",    label:"Otel Mutfağı",      note:"buğulu camlar, baharat rafları"},
+    {key:"teleferik_ist",   label:"Teleferik İstasyonu",note:"durmuş kabin, kar manzarası"},
+    {key:"kar_terasi",      label:"Kar Terası",        note:"örtülü şezlonglar, karda izler"},
+  ],
+  npcs:[
+    {key:"otel_sahibi_meral",label:"Meral Hanım",   note:"otelin sahibesi, töreni veren; çok üzgün"},
+    {key:"antrenor_tarik",   label:"Antrenör Tarık", note:"hırslı kayak antrenörü; sponsoruna söz vermiş"},
+    {key:"kayakci_deniz",    label:"Kayakçı Deniz",  note:"genç şampiyon aday; çok gergin"},
+    {key:"asci_burak",       label:"Aşçı Burak",     note:"az konuşan, tedirgin"},
+    {key:"gazeteci_eda",     label:"Gazeteci Eda",   note:"töreni izlemeye gelmiş davetli (tanık)"},
+  ],
+  items:[
+    {key:"vitrin_madalya", label:"Vitrindeki Madalya",note:"fazla parlak ve hafif görünüyor"},
+    {key:"islak_bot",      label:"Islak Bot",        note:"şömine yanında, eriyen kar izi"},
+    {key:"kar_ayak_izi",   label:"Karda Ayak İzi",   note:"terastan ödül odasına"},
+    {key:"kirik_tabak",    label:"Kırık Tabak",      note:"mutfakta saklanmış"},
+    {key:"kalip_seti",     label:"Küçük Döküm Kalıbı",note:"madalya kopyalamaya yarar; bir şüphelinin yanında"},
+    {key:"sponsor_mektubu",label:"Sponsor Mektubu",  note:"depoda; baskı dolu bir mektup"},
+  ],
+  caseBible:`
+FAIL: antrenor_tarik (Antrenör Tarık).
+YÖNTEM: Tarık gerçek madalyayı kalip_seti ile döktüğü pirinç bir kopyayla değiştirdi, gerçeğini çantasında sakladı. Tipinin herkesi içeride tutacağını biliyordu; planı yollar açılınca madalyayı çıkarmaktı.
+SEBEP: Sponsoru, madalyanın kendi sporcusunda olması için Tarık'a baskı yaptı (sponsor_mektubu). Kariyeri ve itibarı tehlikedeydi. (sebep: sponsor baskısı / hırs — açgözlülük değil)
+ADİL İPUCU ZİNCİRİ:
+1. vitrin_madalya SAHTE — gozlem/bilgi: fazla parlak, hafif, damga yanlış (gerçeği ağır ve aşınmış olur).
+2. kalip_seti Tarık'ın deposundaki çantasında (gizlilik/ikna). Bir antrenörde döküm kalıbı olmaz.
+3. ZAMAN: Tarık "akşamdır şöminedeyim" der; ama islak_bot ve terastan ödül odasına giden kar_ayak_izi dışarı çıkıp oraya gittiğini gösterir (cikarim).
+ŞAŞIRTMACALAR: kayakci_deniz gergin ama masum (sadece yarışmadan korkuyor). asci_burak'ın kirik_tabak'ı suç değil; bir tabak kırıp sakladı, madalyayı değil.
+ÇÖZÜM KOŞULU: (1) sahte madalya + (2) döküm kalıbı + (3) zaman tutarsızlığından ≥2'sini birleştirip Tarık'ı SPONSOR BASKISI sebebiyle suçla → çözüldü. Tek ipucu yetersiz; "kanıtınız zayıf" de. Çözülünce flags_set:{"case_solved":true} ve finali oyna.`.trim()
+},
+{
+  id:"gece_muzesi", emoji:"🦉", title:"Gece Müzesi",
+  subtitle:"Galadan sonra kilitli müze · değiştirilen heykel",
+  style_anchor:"painterly semi-realistic, visible brushwork, cool moonlight through tall windows, grand marble museum at night, soft dust motes and grain",
+  setting:"a grand museum at night after a gala, marble halls lit by moonlight",
+  intro:"Gala bitti, kapılar sabaha dek kilitli. Sergideki ünlü \"Gümüş Baykuş\" heykelciği yerinden gitti; yerinde bir kopya duruyor gibi. Baykuşu sabah olmadan bulun ve gerçeği ortaya çıkarın.",
+  locations:[
+    {key:"ana_galeri",        label:"Ana Galeri",        note:"mermer zemin, baykuşun boş vitrini"},
+    {key:"restorasyon_atolye",label:"Restorasyon Atölyesi",note:"fırçalar, çözücüler, eldivenler"},
+    {key:"guvenlik_odasi",    label:"Güvenlik Odası",    note:"ekranlar, giriş-çıkış defteri"},
+    {key:"arsiv_odasi",       label:"Arşiv Odası",       note:"eski kataloglar, tozlu raflar"},
+    {key:"balo_salonu",       label:"Balo Salonu",       note:"boş kadehler, konfeti"},
+    {key:"bodrum_deposu",     label:"Bodrum Deposu",     note:"sandıklar, nem, kopya kalıpları"},
+  ],
+  npcs:[
+    {key:"muze_muduru_aylin",label:"Müdür Aylin",    note:"sergiyi düzenleyen; telaşlı"},
+    {key:"restorator_kerem", label:"Restoratör Kerem",note:"baykuşa erişimi olan uzman; bu gece çok gergin"},
+    {key:"bekci_orhan",      label:"Bekçi Orhan",    note:"gece nöbetçisi; sert görünüşlü, suçlu gibi davranıyor"},
+    {key:"sponsor_leyla",    label:"Sponsor Leyla",  note:"galanın bağışçısı; kibirli"},
+    {key:"stajyer_mert",     label:"Stajyer Mert",   note:"yeni, heyecanlı (yardımcı)"},
+  ],
+  items:[
+    {key:"vitrin_baykus", label:"Vitrindeki Baykuş",note:"fazla hafif; gümüş damgası yok gibi"},
+    {key:"cozucu_kokusu", label:"Çözücü Kokusu",    note:"baykuş vitrini çevresinde keskin koku"},
+    {key:"eldiven_izi",   label:"Çözücü Lekeli Eldiven",note:"restorasyon atölyesinden"},
+    {key:"kayit_defteri", label:"Giriş-Çıkış Defteri",note:"bir çıkış saati sonradan düzeltilmiş"},
+    {key:"katalog_fisi",  label:"Eski Katalog Fişi",note:"baykuşun gerçek damgasını gösterir"},
+    {key:"kirik_kadeh",   label:"Kırık Kadeh",      note:"balo salonunda"},
+  ],
+  caseBible:`
+FAIL: restorator_kerem (Restoratör Kerem) — ama açgözlü DEĞİL, korkmuş ve haklı.
+YÖNTEM: Kerem restorasyon erişimini kullanıp vitrindeki baykuşu aldı, yerine atölyedeki alçı kopyayı koydu; vitrini çözücüyle açtı.
+SEBEP (sempatik / örtbas): Kerem temizlik sırasında baykuşun ZATEN sahte olduğunu fark etti (gerçeği yıllar önce sessizce değişmiş). Suçun üstüne yıkılmasından korkup kopyayı sakladı ve gerçeği kanıtlamak istedi. (sebep: korku + adalet, para değil)
+ADİL İPUCU ZİNCİRİ:
+1. vitrin_baykus bu geceki kopya — gozlem/bilgi: damga yok, fazla hafif; katalog_fisi gerçek damgayı gösterir.
+2. cozucu_kokusu + eldiven_izi restorasyon atölyesine işaret eder; çözücüye yalnız Kerem erişir (gizlilik/ikna).
+3. ZAMAN: kayit_defteri'nde Kerem'in çıkış saati sonradan düzeltilmiş; galadan sonra hâlâ içerideydi (cikarim).
+ŞAŞIRTMACALAR: bekci_orhan sert ve suçlu gibi davranır ama masum (nöbette uyuyakaldı, kovulmaktan korkuyor). sponsor_leyla kibirli ama masum.
+ÇÖZÜM KOŞULU: (1) kopya baykuş + (2) çözücü/eldiven izi + (3) düzeltilmiş kayıt saatinden ≥2'sini birleştirip Kerem'i suçla → çözüldü. Finalde sebebin AÇGÖZLÜLÜK DEĞİL korku+gerçeği ortaya çıkarma olduğunu sıcak biçimde açıkla. Çözülünce flags_set:{"case_solved":true} ve finali oyna.`.trim()
+},
+{
+  id:"sahil_lunapark", emoji:"🎡", title:"Sahil Lunaparkı",
+  subtitle:"Açılış gecesi · kaybolan uğurlu küre",
+  style_anchor:"painterly semi-realistic, visible brushwork, warm carnival string lights at dusk, cozy seaside funfair, gentle sea breeze and grain",
+  setting:"a cozy seaside carnival at dusk with warm string lights and a Ferris wheel",
+  intro:"Lunaparkın açılış gecesi! Falcı çadırındaki uğurlu \"Ay Taşı\" küresi sahneden kayboldu; onsuz büyük çekiliş yapılamıyor. Park bir saatliğine kapalı. Küreyi çekilişten önce bulun. (Bu vaka en küçükler için en yumuşak olanıdır.)",
+  locations:[
+    {key:"falci_cadiri",  label:"Falcı Çadırı",   note:"mor kumaşlar; kürenin kaybolduğu yer"},
+    {key:"atlikarinca",   label:"Atlıkarınca",    note:"parlak atlar, müzik kutusu"},
+    {key:"balon_standi",  label:"Balon Standı",   note:"renkli balonlar, iğneler"},
+    {key:"donme_dolap",   label:"Dönme Dolap",    note:"duran kabinler, deniz manzarası"},
+    {key:"seker_arabasi", label:"Şeker Arabası",  note:"pamuk şeker, yapışkan tezgah"},
+    {key:"bakim_cadiri",  label:"Bakım Çadırı",   note:"aletler, yedek ampuller"},
+  ],
+  npcs:[
+    {key:"lunapark_sahibi_sevim",label:"Sevim Teyze",note:"parkın sıcak kalpli sahibesi"},
+    {key:"falci_roza",          label:"Falcı Roza", note:"küreyi kaybeden; dramatik"},
+    {key:"palyaco_cem",         label:"Palyaço Cem",note:"neşeli ama bu gece gergin"},
+    {key:"bakimci_umut",        label:"Bakımcı Umut",note:"sessiz, elleri yağlı"},
+    {key:"kucuk_pelin",         label:"Küçük Pelin",note:"parkta dolaşan meraklı bir çocuk"},
+  ],
+  items:[
+    {key:"bos_sehpa",        label:"Kürenin Boş Yeri",note:"falcı çadırı; tozda küre izi"},
+    {key:"sekerli_parmak_izi",label:"Şekerli Parmak İzi",note:"küçük, yapışkan izler"},
+    {key:"kucuk_ayak_izi",   label:"Küçük Ayak İzi",  note:"falcı çadırından atlıkarıncaya"},
+    {key:"yedek_ampul",      label:"Yedek Ampul",     note:"bakım çadırı"},
+    {key:"oyun_bileti",      label:"Buruşuk Oyun Bileti",note:"atlıkarınca yanında"},
+    {key:"mor_kumas",        label:"Mor Kumaş Parçası",note:"bir yere takılmış"},
+  ],
+  caseBible:`
+FAIL: kucuk_pelin (Küçük Pelin) — kötü niyetli DEĞİL, masum bir çocuk.
+YÖNTEM: Pelin küreyi falcı çadırından aldı; küre karanlıkta parladığı için onu "düşmüş bir yıldız" sanıp atlıkarıncadaki en sevdiği atın eyerine, güvenli sandığı bir yere sakladı.
+SEBEP (sıcak/masum): Küre çekilişte bir yabancıya gidecek diye üzüldü ve parlaklığına vuruldu; sakladığında onu "koruduğunu" düşündü. (sebep: çocukça sevgi, hırsızlık niyeti yok)
+ADİL İPUCU ZİNCİRİ:
+1. sekerli_parmak_izi — gozlem: küçük ve yapışkan izler; şeker arabasına ve bir çocuğa işaret eder.
+2. kucuk_ayak_izi — cikarim: falcı çadırından atlıkarıncaya giden küçük ayak izleri.
+3. Atlıkarıncada gozlem/gizlilik ile bakınca küre, en parlak atın eyerinde saklı bulunur.
+ŞAŞIRTMACALAR: bakimci_umut'un yağlı elleri/aletleri şüpheli görünür ama masum (yalnız ampul değiştiriyordu, yedek_ampul). palyaco_cem gergin çünkü gösterisi kötü geçti; küreyle ilgisi yok.
+ÇÖZÜM KOŞULU: (1) şekerli iz + (2) küçük ayak izi + (3) atlıkarıncadaki küreden ≥2'sini birleştirip Pelin'i NAZİKÇE bul. Final SICAK ve affedici olsun (Pelin özür diler, küre çekilişe yetişir). Çocuğu asla azarlama. Çözülünce flags_set:{"case_solved":true} ve finali oyna.`.trim()
+},
+];
 
-YÖNTEM: Kemal davet sırasında vitrindeki gerçek safiri ustalıkla sahte bir cam taşla
-değiştirdi; gerçeğini iç cebinde sakladı. Fırtınanın hatları keseceğini ve kimsenin
-ayrılamayacağını biliyordu; planı sabah "daha iyi incelemek üzere" taşı konaktan çıkarmaktı.
-Vitrin camını açmak için ince bir cam kesici kullandı.
-
-SEBEP: Kemal'in ödenmemiş borçları var (borc_mektubu aslında ONA ait, ama kütüphanede
-sanki başkasınınmış gibi bırakılmış). Safiri bir koleksiyoncuya satmak üzere anlaşmıştı.
-
-ADİL İPUCU ZİNCİRİ (oyuncular birleştirmeli):
-1. vitrin_safir aslında SAHTE — gozlem veya bilgi başarılı olursa taşın fazla kusursuz,
-   çizik/iç kusur barındırmadığı fark edilir (gerçek safirde olur).
-2. cam_kesici Kemal'in çantasında/yanında bulunur (gizlilik ile gizlice veya ikna ile açıkça).
-   Bir sanat ekspertizinde böyle bir alete gerek yoktur.
-3. ZAMAN TUTARSIZLIĞI: Kemal fırtına başlamadan ÖNCE geldiğini söyler; ama islak_semsiye ve
-   hole kadar uzanan camurlu_ayak_izi onun fırtına BAŞLADIKTAN SONRA geldiğini gösterir (cikarim).
-   Yani anlattığı zaman çizelgesi yalan.
-
-ŞAŞIRTMACALAR (red herrings):
-- yegen_can borçlu ve huzursuz → en bariz şüpheli gibi durur ama MASUMDUR (borcunu başka yoldan
-  kapatmış; o gece sadece Leyla Hanım'a itiraf etmeye çekiniyordu).
-- hizmetci_nare'nin yirtik_eldiven'i → suça değil, akşam kırılan bir bardağı toplarken yırtılmıştır.
-  Nare gergindir çünkü kırığı sakladı, safiri değil.
-
-ÇÖZÜM KOŞULU: Oyuncular (1) sahte safir + (2) cam kesici + (3) zaman tutarsızlığından en az İKİSİNİ
-birleştirip eksper_kemal'i BORÇ sebebiyle suçlarsa vaka çözülür. Tek bir ipucu ya da yalnızca
-şaşırtmacalara dayanan suçlama yetersizdir; "henüz kanıtınız zayıf" deyip araştırmayı sürdür.
-Vaka çözüldüğünde state_changes.flags_set içine {"case_solved": true} ekle ve finali oyna.
-`.trim();
+function caseById(id){ return CASES.find(c=>c.id===id) || CASES[0]; }
+let selectedCaseId = CASES[0].id;
+function activeCase(){ return (S && S.case) ? S.case : caseById(selectedCaseId); }
 
 /* ---------- 2. DM SİSTEM PROMPT'U (dm_system_prompt.md) ---------- */
 
@@ -493,13 +605,14 @@ let S = null; // oyun durumu
 const LS_KEY = "sfk_save_v1";
 const LS_CFG = "sfk_cfg_v1";
 
-function freshState(detectives, cfg){
+function freshState(detectives, cfg, kase){
   const registry = {};
-  [["location",SEED_LOCATIONS],["npc",SEED_NPCS],["item",SEED_ITEMS]].forEach(([type,arr])=>{
+  [["location",kase.locations],["npc",kase.npcs],["item",kase.items]].forEach(([type,arr])=>{
     arr.forEach(e=> registry[e.key] = {type, key:e.key, label:e.label, note:e.note, discovered:false});
   });
   return {
     cfg,
+    case: kase,        // seçilen vaka paketi (mekânlar/kişiler/eşyalar + gizli çözüm + tema)
     detectives,
     registry,
     inventory:[],
@@ -527,6 +640,17 @@ function addDetDraft(name=""){
   if(detDrafts.length>=4){ toast("En fazla 4 dedektif."); return; }
   detDrafts.push({name, arch:"keskingoz", traits:"", avatar:null});
   renderDets();
+}
+function renderCaseChoices(){
+  const host=$("caseChoices"); host.innerHTML="";
+  CASES.forEach(c=>{
+    const el=document.createElement("div");
+    el.className="case-card"+(c.id===selectedCaseId?" on":"");
+    el.innerHTML=`<span class="em">${c.emoji}</span><b>${esc(c.title)}</b><small>${esc(c.subtitle)}</small>`;
+    el.onclick=()=>{ selectedCaseId=c.id; renderCaseChoices(); setGameTitle(c); };
+    host.appendChild(el);
+  });
+  $("caseIntro").textContent=caseById(selectedCaseId).intro;
 }
 function renderDets(){
   const host=$("dets"); host.innerHTML="";
@@ -583,8 +707,8 @@ async function generateAvatarFor(i, btn){
   }
 }
 function avatarPrompt(traits){
-  return `${STYLE_ANCHOR}. Character portrait, head and shoulders, of a young amateur detective `
-    + `in a cozy family mystery set in a foggy seaside lighthouse mansion at night. `
+  return `${activeCase().style_anchor}. Character portrait, head and shoulders, of a young amateur detective `
+    + `in a cozy family mystery set in ${activeCase().setting}. `
     + (traits ? `Appearance and personality: ${traits}. ` : "")
     + `Warm, friendly, storybook mood, period-appropriate cozy attire, soft lantern light. `
     + `Single character, facing viewer. No text, no letters, no words, no captions in the image.`;
@@ -629,12 +753,13 @@ function loadCfg(){
   if(c.model) $("model").value=c.model;
   $("artMode").value = c.artMode || "pollinations";
   if(c.imgKey) $("imgKey").value=c.imgKey;
+  if(c.caseId && caseById(c.caseId)) selectedCaseId=c.caseId;
   updateImgKeyVisibility();
   updateSourceVisibility();
 }
 function readCfg(){
   return { aiSource:$("aiSource").value, apiKey:$("apiKey").value.trim(), model:$("model").value,
-    artMode:$("artMode").value, imgKey:$("imgKey").value.trim() };
+    artMode:$("artMode").value, imgKey:$("imgKey").value.trim(), caseId:selectedCaseId };
 }
 function updateSourceVisibility(){
   const local = $("aiSource").value==="local";
@@ -657,10 +782,11 @@ function buildContextBlock(playerAction){
   const registry = Object.values(S.registry).map(e=>({type:e.type,key:e.key,label:e.label}));
   const recent = S.recentTurns.slice(-6).map(t=>`Oyuncu: ${t.action}\nDM: ${t.narration}`).join("\n---\n");
   return [
-    "## CHARACTER_SHEETS", JSON.stringify(sheets, null, 0),
+    "## VAKA", `${activeCase().title} — ${activeCase().intro}`,
+    "\n## CHARACTER_SHEETS", JSON.stringify(sheets, null, 0),
     "\n## ENTITY_REGISTRY", JSON.stringify(registry, null, 0),
     "\n## STORY_SUMMARY", (S.summaryNotes.length? S.summaryNotes.map(n=>"- "+n).join("\n") : "(oyun yeni başladı)"),
-    "\n## CASE_BIBLE_PRIVATE (GİZLİ — asla açık etme)", CASE_BIBLE_PRIVATE,
+    "\n## CASE_BIBLE_PRIVATE (GİZLİ — asla açık etme)", activeCase().caseBible,
     "\n## RECENT_TURNS", recent || "(yok)",
     "\n## LAST_ROLL_RESULT", S.lastRoll? JSON.stringify(S.lastRoll) : "null",
     "\n## PLAYER_ACTION", playerAction,
@@ -825,7 +951,7 @@ function renderScene(image){
   $("sceneLoc").textContent = ent ? ent.label : "Sisli Fener Konağı";
   $("sceneShot").textContent = image.shot || "wide";
   const art=$("sceneArt");
-  art.title = STYLE_ANCHOR;
+  art.title = activeCase().style_anchor;
   // taban: her zaman atmosferik degrade (yüklenirken / sağlayıcı yokken / hata olunca)
   art.style.backgroundImage = gradientFor(key);
   art.style.backgroundSize = "cover";
@@ -871,8 +997,8 @@ function buildImagePrompt(image){
   let subject;
   if(ent && ent.type==="npc") subject = `a person: ${ent.label}${ent.note? ", "+ent.note:""}`;
   else if(ent) subject = `${ent.label}${ent.note? " — "+ent.note:""}`;
-  else subject = "the foggy seaside lighthouse mansion at night";
-  return `${STYLE_ANCHOR}. ${shot} of ${subject}. Cozy mystery storybook atmosphere, `
+  else subject = activeCase().setting;
+  return `${activeCase().style_anchor}. ${shot} of ${subject}. Cozy mystery storybook atmosphere, `
     + `evocative but not frightening, family-friendly. No text, no letters, no words, no captions in the image.`;
 }
 async function generateImage(image, provider, key){
@@ -1105,14 +1231,22 @@ function startGame(){
   const dets = detDrafts.filter(d=>d.name.trim()).map(d=>({name:d.name.trim(), arch:d.arch, traits:(d.traits||"").trim(), avatar:d.avatar||null}));
   if(dets.length===0){ $("setupErr").textContent="En az bir dedektif adı girin."; return; }
   localStorage.setItem(LS_CFG, JSON.stringify(cfg));
-  S = freshState(dets, cfg); S.started=true;
+  const kase = caseById(selectedCaseId);
+  S = freshState(dets, cfg, kase); S.started=true;
+  setGameTitle(kase);
   $("setup").classList.add("hidden"); $("game").classList.remove("hidden");
   $("btnReset").classList.remove("hidden");
   renderSidebars();
   takeTurn(""); // açılış sahnesi
 }
+function setGameTitle(kase){
+  $("gameTitle").textContent = `${kase.emoji} ${kase.title}`;
+  document.title = `${kase.title} — Aile Dedektif Oyunu`;
+}
 function resumeGame(saved){
   S=saved; S.cfg=readCfg(); // ayarları (kaynak/anahtar/model) güncel tut
+  if(!S.case) S.case=caseById("fener_konagi"); // eski kayıtlar tek vakalıydı
+  selectedCaseId=S.case.id; setGameTitle(S.case);
   $("setup").classList.add("hidden"); $("game").classList.remove("hidden");
   $("btnReset").classList.remove("hidden");
   renderSidebars();
@@ -1135,6 +1269,7 @@ function resetGame(){
 /* ---------- 13. Bağlama ---------- */
 function init(){
   loadCfg();
+  renderCaseChoices(); setGameTitle(caseById(selectedCaseId));
   if(detDrafts.length===0){ addDetDraft(""); addDetDraft(""); } // 2 boş dedektif (iki kardeş)
 
   $("aiSource").onchange=updateSourceVisibility;
