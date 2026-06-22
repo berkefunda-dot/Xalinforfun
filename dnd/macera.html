@@ -495,7 +495,11 @@ async function callDM(action){
 }
 async function callLocal(sys){
   const prompt=sys+"\n\n# GÖREV\nYukarıdaki bağlama göre Anlatıcı olarak tek bir tur üret. Hiçbir araç kullanma. Yanıt SADECE geçerli JSON nesnesi olsun.";
-  const r=await fetch("/api/dm",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,model:S.cfg.model})});
+  if(location.protocol==="file:")
+    throw new Error("Sayfayı dosyadan açmışsın (file://). Yerel mod çalışmaz. Terminalde 'node server.js' çalıştır ve http://127.0.0.1:8787/macera.html adresinden aç.");
+  let r;
+  try{ r=await fetch("/api/dm",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,model:S.cfg.model})}); }
+  catch(e){ throw new Error("Yerel sunucuya ulaşılamadı. 'node server.js' çalışıyor mu? Sayfayı http://127.0.0.1:8787/macera.html üzerinden aç (dosyayı çift tıklayarak değil)."); }
   let j={};try{j=await r.json();}catch(e){} if(!r.ok||!j.ok)throw new Error(j.error||("Yerel sunucu "+r.status+". 'node server.js' çalışıyor mu?"));
   return parseJson(j.result);
 }
@@ -725,6 +729,7 @@ function resetGame(){if(!confirm("Mevcut macera silinsin mi?"))return;localStora
 
 function init(){
   loadCfg();
+  if(location.protocol==="file:") toast("⚠️ Dosyadan açtın (file://). Yerel/ücretsiz mod için: 'node server.js' çalıştır ve http://127.0.0.1:8787/macera.html aç.",7000);
   $("advIntro").textContent=ADVENTURE.intro;
   if(heroDrafts.length===0){addHero("");addHero("");}
   $("aiSource").onchange=updateSourceVis;
