@@ -829,8 +829,12 @@ async function callDMLocal(sys){
     + "\n\n# GÖREV\nYukarıdaki BU TURUN BAĞLAMI ve PLAYER_ACTION'a göre Anlatıcı olarak tek bir tur üret. "
     + "Hiçbir araç kullanma; dosya okuma/yazma; başka bir şey yapma. "
     + "Yanıtın SADECE belirtilen şemada geçerli bir JSON nesnesi olsun — başına/sonuna metin, açıklama veya ``` ekleme.";
-  const r = await fetch("/api/dm",{ method:"POST", headers:{"content-type":"application/json"},
-    body: JSON.stringify({ prompt, model:S.cfg.model }) });
+  if(location.protocol==="file:")
+    throw new Error("Sayfayı dosyadan açmışsın (file://). Yerel mod çalışmaz. 'node server.js' çalıştır ve http://127.0.0.1:8787/ adresinden aç (ya da start-local.cmd'ye çift tıkla).");
+  let r;
+  try{ r = await fetch("/api/dm",{ method:"POST", headers:{"content-type":"application/json"},
+    body: JSON.stringify({ prompt, model:S.cfg.model }) }); }
+  catch(e){ throw new Error("Yerel sunucuya ulaşılamadı. 'node server.js' çalışıyor mu? Sayfayı http://127.0.0.1:8787/ üzerinden aç (start-local.cmd'ye çift tıklamak en kolayı)."); }
   let j={}; try{ j=await r.json(); }catch(e){}
   if(!r.ok || !j.ok) throw new Error(j.error || ("Yerel sunucu hatası "+r.status+". 'node server.js' çalışıyor mu?"));
   return parseDMJson(j.result);
