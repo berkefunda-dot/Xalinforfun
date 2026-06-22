@@ -145,6 +145,44 @@
     border-radius:14px;padding:16px;text-align:center;margin-top:14px}
   .winbanner h2{color:var(--gold);font-size:22px}
   @media(min-width:720px){ .grid2{grid-template-columns:1fr 1fr} }
+
+  /* ---- zar modalı ---- */
+  .modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    padding:18px;background:rgba(8,5,4,.72);backdrop-filter:blur(3px);animation:fade .25s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modalcard{position:relative;width:100%;max-width:440px;
+    background:linear-gradient(180deg,#2a2017 0%,#1a130e 100%);
+    border:1px solid var(--gold-dim);border-radius:18px;padding:22px 20px 20px;
+    box-shadow:0 22px 60px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+    animation:pop .3s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes pop{from{transform:scale(.9) translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  .modalcard .avatar{position:absolute;top:-26px;left:-10px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .modalcard .avatar .face{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:30px;background:#15100c;border:3px solid var(--gold);box-shadow:0 6px 16px rgba(0,0,0,.5)}
+  .modalcard .avatar .nm{font-size:11px;color:var(--ink-dim);background:rgba(0,0,0,.5);padding:1px 8px;border-radius:999px;max-width:90px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .modalcard h3{font-family:var(--serif);color:var(--gold);text-align:center;font-size:18px;margin:6px 0 2px}
+  .modalcard .dc{text-align:center;color:var(--ink-dim);font-size:13px;margin-bottom:14px}
+  .stakes{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+  .stake{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:#15100c}
+  .stake .ic{flex:none;font-weight:800}
+  .stake.win .ic{color:var(--ok)} .stake.lose .ic{color:var(--bad)}
+  .stake b{color:var(--ink)}
+  .bigdie-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;margin:6px 0 14px}
+  .bigdie{width:104px;height:104px;border-radius:20px;display:flex;align-items:center;justify-content:center;
+    font-family:var(--serif);font-weight:800;font-size:52px;color:var(--gold);
+    background:radial-gradient(120% 120% at 30% 25%,#3a2c1c,#16100b);border:2px solid var(--gold-dim);
+    box-shadow:0 10px 26px rgba(0,0,0,.5), inset 0 2px 6px rgba(255,255,255,.06)}
+  .bigdie.rolling{animation:tumble .12s linear infinite}
+  @keyframes tumble{0%{transform:rotate(-12deg) scale(1.02)}50%{transform:rotate(10deg) scale(.96)}100%{transform:rotate(-6deg) scale(1.03)}}
+  .bigdie.settle{animation:land .45s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes land{0%{transform:scale(1.25) rotate(6deg)}100%{transform:none}}
+  .formula{font-size:15px;color:var(--ink-dim);min-height:22px;text-align:center}
+  .formula .tot{color:var(--ink);font-weight:700}
+  .outcome{text-align:center;font-family:var(--serif);font-size:22px;font-weight:800;min-height:30px}
+  .outcome.ok{color:var(--ok)} .outcome.partial{color:var(--warn)} .outcome.bad{color:var(--bad)}
+  .modal .row{margin-top:6px}
+  .whoSel{margin-bottom:14px}
 </style>
 </head>
 <body>
@@ -249,6 +287,35 @@
       <summary>🗺 Keşfedilen Mekânlar & Kişiler<span class="ct" id="entCt"></span></summary>
       <div class="body" id="entities"></div>
     </details>
+  </div>
+</div>
+
+<!-- ===================== ZAR MODALI ===================== -->
+<div id="rollModal" class="modal hidden">
+  <div class="modalcard">
+    <div class="avatar">
+      <div class="face" id="rollFace">🕵</div>
+      <div class="nm" id="rollName">Dedektif</div>
+    </div>
+    <h3 id="rollTitle">Gözlem Denemesi</h3>
+    <div class="dc" id="rollDc">Zorluk (DC) 13</div>
+
+    <div class="whoSel" id="rollWhoWrap"></div>
+
+    <div class="stakes">
+      <div class="stake win"><span class="ic">✔</span><div><b>Başarırsan:</b> <span id="stakeWin">değerli bir ipucu yakalarsın.</span></div></div>
+      <div class="stake lose"><span class="ic">✘</span><div><b>Başaramazsan:</b> <span id="stakeLose">iz soğur ya da dikkat çekersin.</span></div></div>
+    </div>
+
+    <div class="bigdie-wrap">
+      <div class="bigdie" id="bigDie">?</div>
+      <div class="formula" id="rollFormula"></div>
+    </div>
+    <div class="outcome" id="rollOutcome"></div>
+
+    <div class="row" id="rollActions">
+      <button class="btn" id="rollGo">🎲 Zar At</button>
+    </div>
   </div>
 </div>
 
@@ -373,7 +440,12 @@ kod bloğu işareti yazma. Yanıt tek bir JSON nesnesi olmalı:
   "state_changes": { "flags_set": {}, "inventory_add": [], "notes_add": [] },
   "image": { "primary_entity_key": "mekan_veya_kisi_key", "shot": "wide|portrait|detail" }
 }
-- roll_request örneği: { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2" }
+- roll_request örneği:
+  { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2",
+    "on_success":"vitrindeki taşın sahte olduğunu fark edersin", "on_fail":"bir şey dikkatini çekmez, vakit kaybedersin" }
+- roll_request döndürürken on_success ve on_fail alanlarını HER ZAMAN doldur: bu denemede
+  başarı ve başarısızlığın somut sonucunu kısa, net, Türkçe bir cümleyle yaz (oyuncuya
+  riski göstermek için). Çözümü ele verme; ipucu niteliğinde tut.
 - state_changes yalnızca öneridir; backend işler.
 - notes_add: oyuncuların defterine yazılacak somut ipucu/keşif cümleleri (kısa, Türkçe).
 - inventory_add: ele geçen eşyaların Görünen Adları.
@@ -715,56 +787,76 @@ async function genOpenAI(prompt, key){
 
 /* ---------- 9. Zar ---------- */
 function bonusFor(det, skill){ return (ARCHETYPES[det.arch].skills[skill]||0); }
+const ARCH_AVATAR = { keskingoz:"🔍", tatlidil:"💬", sessizayak:"🐾", bilgin:"📚" };
+function detAvatar(det){ return (det && ARCH_AVATAR[det.arch]) || "🕵"; }
+
+let curRoll=null; // {rr, idx}
+
 function startRoll(rr){
   S.pendingRoll=rr;
-  const host=$("rollHost"); host.innerHTML="";
-  const box=document.createElement("div"); box.className="rollbox";
-  const who = S.detectives.length>1
-    ? `<label style="margin:0 0 6px">Kim deneyecek?</label>
-       <select id="rollWho">${S.detectives.map((d,i)=>`<option value="${i}">${esc(d.name)} (${SKILL_LABELS[rr.skill]} +${bonusFor(d,rr.skill)})</option>`).join("")}</select>`
-    : "";
-  box.innerHTML=`
-    <div class="muted" style="margin-bottom:8px">🎲 <b>${SKILL_LABELS[rr.skill]||rr.skill}</b> denemesi — Zorluk (DC) <b>${rr.dc}</b></div>
-    ${who}
-    <div class="hd" style="margin-top:10px">
-      <div class="die" id="dieFace">?</div>
-      <button class="btn" id="doRoll">Zar At</button>
-      <div id="rollOut" class="muted"></div>
-    </div>`;
-  host.appendChild(box);
-  $("choices").innerHTML=""; // zar sırasında seçenekleri gizle
-  $("doRoll").onclick=()=>doRoll(rr);
+  curRoll={ rr, idx:0 };
+  $("rollTitle").textContent = (SKILL_LABELS[rr.skill]||rr.skill) + " Denemesi";
+  $("rollDc").textContent    = "Zorluk (DC) " + rr.dc;
+  $("stakeWin").textContent  = rr.on_success || "değerli bir ipucu ya da avantaj yakalarsın.";
+  $("stakeLose").textContent = rr.on_fail    || "iz soğur, dikkat çekersin ya da fırsat kaçar.";
+
+  const wrap=$("rollWhoWrap");
+  if(S.detectives.length>1){
+    wrap.innerHTML = `<label style="margin:0 0 6px">Kim deneyecek?</label>
+      <select id="rollWho">${S.detectives.map((d,i)=>
+        `<option value="${i}">${esc(d.name)} — ${SKILL_LABELS[rr.skill]} +${bonusFor(d,rr.skill)}</option>`).join("")}</select>`;
+    wrap.classList.remove("hidden");
+    $("rollWho").onchange=e=>{ curRoll.idx=+e.target.value; updateRollAvatar(); };
+  } else { wrap.innerHTML=""; wrap.classList.add("hidden"); }
+  updateRollAvatar();
+
+  $("bigDie").textContent="?"; $("bigDie").className="bigdie";
+  $("rollFormula").textContent=""; $("rollOutcome").textContent=""; $("rollOutcome").className="outcome";
+  $("rollActions").innerHTML=
+    '<button class="btn" id="rollGo">🎲 Zar At</button>'+
+    '<button class="btn ghost" id="rollCancel">Vazgeç</button>';
+  $("rollGo").onclick=doRoll;
+  $("rollCancel").onclick=()=>$("rollModal").classList.add("hidden");
+  $("rollModal").classList.remove("hidden");
 }
-function doRoll(rr){
-  const whoSel=$("rollWho"); const idx= whoSel? +whoSel.value : 0;
-  const det=S.detectives[idx]; const bonus=bonusFor(det,rr.skill);
-  const die=$("dieFace"); $("doRoll").disabled=true; if(whoSel) whoSel.disabled=true;
+function updateRollAvatar(){
+  const det=S.detectives[curRoll.idx]||S.detectives[0];
+  $("rollFace").textContent=detAvatar(det);
+  $("rollName").textContent=det? det.name : "Dedektif";
+}
+function doRoll(){
+  const rr=curRoll.rr;
+  const det=S.detectives[curRoll.idx]||S.detectives[0];
+  const bonus=bonusFor(det,rr.skill);
+  const whoSel=$("rollWho"); if(whoSel) whoSel.disabled=true;
+  const die=$("bigDie"); die.className="bigdie rolling";
+  $("rollActions").innerHTML=""; // At/Vazgeç gizle, atış başladı
   let ticks=0;
   const iv=setInterval(()=>{
-    die.textContent=1+Math.floor(myRandom()*20); die.classList.add("spin");
-    setTimeout(()=>die.classList.remove("spin"),120);
-    if(++ticks>=10){
+    die.textContent=1+Math.floor(Math.random()*20);
+    if(++ticks>=14){
       clearInterval(iv);
-      const d20=1+Math.floor(myRandom()*20);
-      die.textContent=d20;
+      const d20=1+Math.floor(Math.random()*20);
+      die.textContent=d20; die.className="bigdie settle";
       const total=d20+bonus;
       let outcome="basarisiz", cls="bad";
       if(d20===20){ outcome="kritik_basari"; cls="ok"; }
       else if(d20===1){ outcome="komik_aksilik"; cls="bad"; }
       else if(total>=rr.dc){ outcome="basari"; cls="ok"; }
       else if(total>=rr.dc-3){ outcome="kismi_basari"; cls="partial"; }
-      const label={basari:"BAŞARILI",kismi_basari:"KISMİ",basarisiz:"BAŞARISIZ",
-        kritik_basari:"KRİTİK BAŞARI! 🌟",komik_aksilik:"KOMİK AKSİLİK 😅"}[outcome];
-      $("rollOut").innerHTML=`<span class="res ${cls}">${d20} + ${bonus} = ${total} → ${label}</span>`;
+      const label={basari:"BAŞARILI",kismi_basari:"KISMİ BAŞARI",basarisiz:"BAŞARISIZ",
+        kritik_basari:"KRİTİK! 🌟",komik_aksilik:"AKSİLİK 😅"}[outcome];
+      $("rollFormula").innerHTML=`🎲 ${d20} ${bonus>=0?"+":"−"} ${Math.abs(bonus)} = <span class="tot">${total}</span> &nbsp;·&nbsp; DC ${rr.dc}`;
+      const oc=$("rollOutcome"); oc.textContent=label; oc.className="outcome "+cls;
       S.lastRoll={ skill:rr.skill, detective:det.name, d20, bonus, total, dc:rr.dc, outcome };
-      setTimeout(()=>{
+      $("rollActions").innerHTML='<button class="btn" id="rollNext">Devam ▸</button>';
+      $("rollNext").onclick=()=>{
+        $("rollModal").classList.add("hidden");
         takeTurn(`${det.name}, "${rr.choiceText}" eylemini denedi. Zar sonucu: ${SKILL_LABELS[rr.skill]} ${total} (DC ${rr.dc}) → ${label}.`);
-      }, 700);
+      };
     }
-  }, 70);
+  }, 65);
 }
-// d20 için basit RNG (Math.random sarmalayıcı; oyun istemcisinde tekrar gerekmez)
-function myRandom(){ return Math.random(); }
 
 /* ---------- 10. Sidebar render ---------- */
 function renderSidebars(){
