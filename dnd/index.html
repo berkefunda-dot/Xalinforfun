@@ -66,6 +66,10 @@
   .det .archs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
   .arch{flex:1;min-width:130px;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;background:#15100c}
   .arch.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .avprev{width:52px;height:52px;border-radius:50%;flex:none;background:#15100c;border:2px solid var(--gold-dim);
+    background-size:cover;background-position:center;display:flex;align-items:center;justify-content:center;font-size:24px}
+  .dtraits{font-size:14px}
+  .avgen:disabled{opacity:.6}
   .arch b{display:block;color:var(--gold);font-size:14px}
   .arch small{color:var(--muted);font-size:11px}
   .rmdet{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px}
@@ -502,15 +506,17 @@ function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">
 let detDrafts = [];
 function addDetDraft(name=""){
   if(detDrafts.length>=4){ toast("En fazla 4 dedektif."); return; }
-  detDrafts.push({name, arch:"keskingoz"});
+  detDrafts.push({name, arch:"keskingoz", traits:"", avatar:null});
   renderDets();
 }
 function renderDets(){
   const host=$("dets"); host.innerHTML="";
   detDrafts.forEach((d,i)=>{
     const el=document.createElement("div"); el.className="det";
+    const avStyle = d.avatar ? `background-image:url('${d.avatar}')` : "";
     el.innerHTML=`
-      <div style="display:flex;gap:8px;align-items:center">
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="avprev" data-av="${i}" style="${avStyle}">${d.avatar?"":"🕵"}</div>
         <input data-i="${i}" class="dname" placeholder="Dedektif adı" value="${esc(d.name)}" style="flex:1"/>
         ${detDrafts.length>1?`<button class="rmdet" data-rm="${i}">kaldır</button>`:""}
       </div>
@@ -519,13 +525,66 @@ function renderDets(){
           <div class="arch ${d.arch===k?"on":""}" data-arch="${i}:${k}">
             <b>${a.label}</b><small>${a.desc}</small>
           </div>`).join("")}
-      </div>`;
+      </div>
+      <input data-traits="${i}" class="dtraits" placeholder="Görünüş / özellikler (ör. kızıl saçlı, gözlüklü, meraklı)" value="${esc(d.traits||"")}" style="margin-top:8px"/>
+      <button class="btn ghost avgen" data-gen="${i}" style="margin-top:8px;padding:9px 14px;font-size:14px">
+        ${d.avatar?"🎨 Avatarı yenile":"🎨 AI avatar oluştur"}
+      </button>`;
     host.appendChild(el);
   });
   host.querySelectorAll(".dname").forEach(inp=> inp.oninput=e=>{ detDrafts[+e.target.dataset.i].name=e.target.value; });
+  host.querySelectorAll(".dtraits").forEach(inp=> inp.oninput=e=>{ detDrafts[+e.target.dataset.traits].traits=e.target.value; });
   host.querySelectorAll("[data-rm]").forEach(b=> b.onclick=e=>{ detDrafts.splice(+e.target.dataset.rm,1); renderDets(); });
   host.querySelectorAll("[data-arch]").forEach(b=> b.onclick=e=>{
     const [i,k]=e.currentTarget.dataset.arch.split(":"); detDrafts[+i].arch=k; renderDets(); });
+  host.querySelectorAll("[data-gen]").forEach(b=> b.onclick=()=>generateAvatarFor(+b.dataset.gen, b));
+}
+
+/* ---------- AI avatar üretimi (setup) ---------- */
+async function generateAvatarFor(i, btn){
+  const d = detDrafts[i];
+  const cfg = readCfg();
+  if(!["server","gemini","openai"].includes(cfg.artMode)){
+    toast("Önce Ayarlar → Görsel sahne kartı'ndan bir AI sağlayıcı seç (Gemini / OpenAI / Yerel sunucu)."); return;
+  }
+  if((cfg.artMode==="gemini"||cfg.artMode==="openai") && !cfg.imgKey){
+    toast("Önce görsel API anahtarını gir."); return;
+  }
+  const old = btn.textContent; btn.disabled=true; btn.textContent="🎨 Oluşturuluyor…";
+  try{
+    const raw = await genAvatarImage(d.traits, cfg);
+    d.avatar = await downscaleDataUrl(raw, 256);  // localStorage dostu küçük boyut
+    renderDets();
+  }catch(err){
+    toast("Avatar üretilemedi: "+err.message.slice(0,80));
+    btn.disabled=false; btn.textContent=old;
+  }
+}
+async function genAvatarImage(traits, cfg){
+  const prompt = `${STYLE_ANCHOR}. Character portrait, head and shoulders, of a young amateur detective `
+    + `in a cozy family mystery set in a foggy seaside lighthouse mansion at night. `
+    + (traits ? `Appearance and personality: ${traits}. ` : "")
+    + `Warm, friendly, storybook mood, period-appropriate cozy attire, soft lantern light. `
+    + `Single character, facing viewer. No text, no letters, no words, no captions in the image.`;
+  if(cfg.artMode==="server") return genServer(prompt);
+  if(cfg.artMode==="openai") return genOpenAI(prompt, cfg.imgKey);
+  return genGemini(prompt, cfg.imgKey);
+}
+function downscaleDataUrl(dataUrl, size){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const c=document.createElement("canvas"); c.width=size; c.height=size;
+        const ctx=c.getContext("2d");
+        const s=Math.min(img.width,img.height);
+        ctx.drawImage(img,(img.width-s)/2,(img.height-s)/2,s,s,0,0,size,size);
+        resolve(c.toDataURL("image/jpeg",0.85));
+      }catch(e){ resolve(dataUrl); } // CORS/taint olursa orijinali kullan
+    };
+    img.onerror=()=>reject(new Error("görsel yüklenemedi"));
+    img.src=dataUrl;
+  });
 }
 
 const IS_LOCAL = ["localhost","127.0.0.1",""].includes(location.hostname);
@@ -861,7 +920,15 @@ function startRoll(rr){
 }
 function updateRollAvatar(){
   const det=S.detectives[curRoll.idx]||S.detectives[0];
-  $("rollFace").textContent=detAvatar(det);
+  const face=$("rollFace");
+  if(det && det.avatar){
+    face.textContent="";
+    face.style.backgroundImage=`url("${det.avatar}")`;
+    face.style.backgroundSize="cover"; face.style.backgroundPosition="center";
+  } else {
+    face.style.backgroundImage="";
+    face.textContent=detAvatar(det);
+  }
   $("rollName").textContent=det? det.name : "Dedektif";
 }
 function doRoll(){
@@ -906,7 +973,10 @@ function renderSidebars(){
     const a=ARCHETYPES[d.arch];
     const sk=Object.entries(a.skills).filter(([,v])=>v>0)
       .map(([k,v])=>`<span class="pill">${SKILL_LABELS[k]} +${v}</span>`).join("");
-    return `<div class="ent"><div><b>${esc(d.name)}</b> <span class="muted">· ${a.label}</span><br>${sk}</div></div>`;
+    const av = d.avatar
+      ? `<div class="avprev" style="width:42px;height:42px;font-size:20px;background-image:url('${d.avatar}')"></div>`
+      : `<div class="avprev" style="width:42px;height:42px;font-size:20px">${detAvatar(d)}</div>`;
+    return `<div class="ent" style="align-items:center">${av}<div><b>${esc(d.name)}</b> <span class="muted">· ${a.label}</span><br>${sk}</div></div>`;
   }).join("");
   if(S.inventory.length){
     p.innerHTML += `<div style="margin-top:8px"><div class="muted" style="margin-bottom:4px">Eşyalar</div>`
@@ -951,7 +1021,7 @@ function startGame(){
   const cfg=readCfg();
   $("setupErr").textContent="";
   if(cfg.aiSource==="api" && !cfg.apiKey){ $("setupErr").textContent="API anahtarı gerekli (ya da 'Yerel sunucu' modunu seç)."; return; }
-  const dets = detDrafts.filter(d=>d.name.trim()).map(d=>({name:d.name.trim(), arch:d.arch}));
+  const dets = detDrafts.filter(d=>d.name.trim()).map(d=>({name:d.name.trim(), arch:d.arch, traits:(d.traits||"").trim(), avatar:d.avatar||null}));
   if(dets.length===0){ $("setupErr").textContent="En az bir dedektif adı girin."; return; }
   localStorage.setItem(LS_CFG, JSON.stringify(cfg));
   S = freshState(dets, cfg); S.started=true;
