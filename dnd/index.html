@@ -236,6 +236,7 @@
         <div>
           <label>Görsel sahne kartı</label>
           <select id="artMode">
+            <option value="pollinations">Ücretsiz AI görsel — anahtarsız (Pollinations) ⭐</option>
             <option value="gradient">Atmosferik renk — bedava</option>
             <option value="server">Yerel sunucu (SD / Gemini)</option>
             <option value="gemini">Gemini görsel (tarayıcıdan)</option>
@@ -544,8 +545,8 @@ function renderDets(){
 async function generateAvatarFor(i, btn){
   const d = detDrafts[i];
   const cfg = readCfg();
-  if(!["server","gemini","openai"].includes(cfg.artMode)){
-    toast("Önce Ayarlar → Görsel sahne kartı'ndan bir AI sağlayıcı seç (Gemini / OpenAI / Yerel sunucu)."); return;
+  if(!["pollinations","server","gemini","openai"].includes(cfg.artMode)){
+    toast("Önce Ayarlar → Görsel sahne kartı'ndan bir AI sağlayıcı seç (Pollinations / Gemini / OpenAI / Yerel sunucu)."); return;
   }
   if((cfg.artMode==="gemini"||cfg.artMode==="openai") && !cfg.imgKey){
     toast("Önce görsel API anahtarını gir."); return;
@@ -553,7 +554,8 @@ async function generateAvatarFor(i, btn){
   const old = btn.textContent; btn.disabled=true; btn.textContent="🎨 Oluşturuluyor…";
   try{
     const raw = await genAvatarImage(d.traits, cfg);
-    d.avatar = await downscaleDataUrl(raw, 256);  // localStorage dostu küçük boyut
+    // Pollinations URL döndürür → küçültmeye gerek yok; diğerleri dataURL → 256px'e küçült
+    d.avatar = (typeof raw==="string" && raw.startsWith("http")) ? raw : await downscaleDataUrl(raw, 256);
     renderDets();
   }catch(err){
     toast("Avatar üretilemedi: "+err.message.slice(0,80));
@@ -566,6 +568,7 @@ async function genAvatarImage(traits, cfg){
     + (traits ? `Appearance and personality: ${traits}. ` : "")
     + `Warm, friendly, storybook mood, period-appropriate cozy attire, soft lantern light. `
     + `Single character, facing viewer. No text, no letters, no words, no captions in the image.`;
+  if(cfg.artMode==="pollinations") return genPollinations(prompt, 640, 640, Math.floor(Math.random()*1000000));
   if(cfg.artMode==="server") return genServer(prompt);
   if(cfg.artMode==="openai") return genOpenAI(prompt, cfg.imgKey);
   return genGemini(prompt, cfg.imgKey);
@@ -595,7 +598,7 @@ function loadCfg(){
   $("aiSource").value = c.aiSource || (IS_LOCAL ? "local" : "api");
   if(c.apiKey) $("apiKey").value=c.apiKey;
   if(c.model) $("model").value=c.model;
-  $("artMode").value = c.artMode || (IS_LOCAL ? "server" : "gradient");
+  $("artMode").value = c.artMode || "pollinations";
   if(c.imgKey) $("imgKey").value=c.imgKey;
   updateImgKeyVisibility();
   updateSourceVisibility();
@@ -800,7 +803,7 @@ function renderScene(image){
   art.style.backgroundPosition = "center";
   art.classList.remove("loading");
 
-  if(mode!=="gemini" && mode!=="openai" && mode!=="server") return;   // sadece degrade
+  if(mode!=="gemini" && mode!=="openai" && mode!=="server" && mode!=="pollinations") return; // sadece degrade
   if((mode==="gemini"||mode==="openai") && !S.cfg.imgKey) return;     // anahtar yok → degrade kalsın
   const cacheKey = key+":"+(image.shot||"wide");
   if(imgCache[cacheKey]){ setSceneImage(imgCache[cacheKey], cacheKey); return; }
@@ -845,8 +848,20 @@ function buildImagePrompt(image){
 }
 async function generateImage(image, provider, key){
   const prompt = buildImagePrompt(image);
+  if(provider==="pollinations") return genPollinations(prompt, 768, 512, seedFor(image.primary_entity_key+":"+image.shot));
   if(provider==="server") return genServer(prompt);
   return provider==="openai" ? genOpenAI(prompt, key) : genGemini(prompt, key);
+}
+function seedFor(str){ let h=0; for(const c of (str||"x")) h=(h*31+c.charCodeAt(0))>>>0; return h%1000000; }
+function genPollinations(prompt, w, h, seed){
+  const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`
+    + `?width=${w}&height=${h}&nologo=true&model=flux&seed=${seed}`;
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>resolve(url);                 // URL'i doğrudan kullan (anahtar/kota yok)
+    img.onerror=()=>reject(new Error("Pollinations görseli yüklenemedi (internet?)"));
+    img.src=url;
+  });
 }
 async function genServer(prompt){
   const r = await fetch("/api/image",{ method:"POST", headers:{"content-type":"application/json"},
