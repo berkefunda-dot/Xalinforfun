@@ -314,11 +314,6 @@
 
     <div class="whoSel" id="rollWhoWrap"></div>
 
-    <div class="stakes">
-      <div class="stake win"><span class="ic">✔</span><div><b>Başarırsan:</b> <span id="stakeWin">değerli bir ipucu yakalarsın.</span></div></div>
-      <div class="stake lose"><span class="ic">✘</span><div><b>Başaramazsan:</b> <span id="stakeLose">iz soğur ya da dikkat çekersin.</span></div></div>
-    </div>
-
     <div class="bigdie-wrap">
       <div class="bigdie" id="bigDie">?</div>
       <div class="formula" id="rollFormula"></div>
@@ -452,16 +447,9 @@ kod bloğu işareti yazma. Yanıt tek bir JSON nesnesi olmalı:
   "state_changes": { "flags_set": {}, "inventory_add": [], "notes_add": [] },
   "image": { "primary_entity_key": "mekan_veya_kisi_key", "shot": "wide|portrait|detail" }
 }
-- roll_request örneği:
-  { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2",
-    "on_success":"Taşla ilgili gözden kaçan önemli bir ayrıntı yakalarsın", "on_fail":"Aceleyle bakar, bir şey fark etmeden vakit kaybedersin" }
-- on_success ve on_fail alanlarını HER ZAMAN doldur, AMA bunlar SPOILER İÇERMEMELİ.
-  Bu alanlar zar ATILMADAN ÖNCE oyuncuya gösterilir; bu yüzden NEYİN RİSKTE olduğunu ima eden,
-  kısa ve merak uyandıran birer cümle yaz — ama somut bulguyu, sırrı veya çözümü ASLA yazma.
-  Gerçek keşif yalnızca zar sonrası narration'da açıklanır.
-  · İYİ:  on_success "Şüphelinin anlattığı zamanlamada bir tutarsızlık sezersin"
-  · İYİ:  on_fail "Konuşma dağılır, aradığın detayı kaçırırsın"
-  · KÖTÜ (YAPMA): "Safirin sahte olduğunu anlarsın" / "Cam kesiciyi bulursun" (sırrı ele veriyor)
+- roll_request örneği: { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2" }
+- Sonucu (başarı/başarısızlık) zardan ÖNCE oyuncuya açıklama; ne kazanıp ne kaybedeceğini önceden
+  söyleme. Gerçek keşif yalnızca zar atıldıktan SONRA, LAST_ROLL_RESULT'a göre narration'da anlatılır.
 - state_changes yalnızca öneridir; backend işler.
 - notes_add: oyuncuların defterine yazılacak somut ipucu/keşif cümleleri (kısa, Türkçe).
 - inventory_add: ele geçen eşyaların Görünen Adları.
@@ -851,8 +839,6 @@ function startRoll(rr){
   curRoll={ rr, idx:0 };
   $("rollTitle").textContent = (SKILL_LABELS[rr.skill]||rr.skill) + " Denemesi";
   $("rollDc").textContent    = "Zorluk (DC) " + rr.dc;
-  $("stakeWin").textContent  = rr.on_success || "değerli bir ipucu ya da avantaj yakalarsın.";
-  $("stakeLose").textContent = rr.on_fail    || "iz soğur, dikkat çekersin ya da fırsat kaçar.";
 
   const wrap=$("rollWhoWrap");
   if(S.detectives.length>1){
