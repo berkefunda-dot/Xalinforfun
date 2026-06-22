@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0f0c12" />
+<title>Sönen Ocak — D&D Macerası</title>
+<style>
+  :root{
+    --bg:#0f0c12; --bg2:#161019; --panel:#1c1620; --panel2:#241b2b;
+    --ink:#ece3f0; --ink-dim:#c4b6cf; --muted:#9384a3;
+    --gold:#e0a64b; --gold-dim:#b9863a; --ember:#d9743f; --line:#352a40;
+    --ok:#7bbf6a; --warn:#d9a441; --bad:#cf5a5a; --blue:#6f9ac7; --hp:#cf5a5a; --hp2:#7bbf6a;
+    --serif:"Georgia","Times New Roman",serif; --sans:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{font-family:var(--sans);color:var(--ink);line-height:1.55;
+    background:
+      radial-gradient(1100px 700px at 75% -10%, #2a1830 0%, transparent 60%),
+      radial-gradient(900px 600px at 5% 110%, #10202a 0%, transparent 55%),
+      linear-gradient(160deg,#0f0c12 0%, #08060a 100%);
+    background-attachment:fixed;}
+  .wrap{max-width:960px;margin:0 auto;padding:18px 16px 60px}
+  h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:.3px}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .topbar .title{font-family:var(--serif);font-size:clamp(20px,4.5vw,30px);color:var(--gold);text-shadow:0 2px 12px rgba(224,166,75,.25)}
+  .topbar .sub{color:var(--muted);font-size:13px;font-style:italic}
+  .spacer{flex:1}
+  .iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer}
+  .iconbtn:hover{border-color:var(--gold-dim);color:var(--ink)}
+  a{color:var(--gold)}
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--bg2) 100%);border:1px solid var(--line);border-radius:16px;padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03)}
+  .card+.card{margin-top:14px}
+  label{display:block;font-size:13px;color:var(--ink-dim);margin:10px 0 5px}
+  input,select,textarea{width:100%;background:#120e16;border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--sans)}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--gold-dim)}
+  .btn{background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dim) 100%);color:#231708;border:none;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 5px 0 #7d5a23, 0 8px 18px rgba(0,0,0,.4)}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #7d5a23}
+  .btn.ghost{background:var(--panel2);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:120px}
+  .muted{color:var(--muted);font-size:13px}.hidden{display:none!important}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink-dim);margin:2px}
+  .err{color:var(--bad);font-size:13px;margin-top:8px}
+
+  /* class / hero setup */
+  .hero{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:#150f1b}
+  .classes{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .cls{flex:1;min-width:140px;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;background:#120e16}
+  .cls.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .cls .em{font-size:20px}.cls b{display:block;color:var(--gold);font-size:14px}.cls small{color:var(--muted);font-size:11px}
+  .cls .st{margin-top:4px;font-size:11px;color:var(--ink-dim)}
+  .rmh{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px}
+
+  /* scene */
+  .scene{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);margin-bottom:14px;min-height:170px;display:flex;align-items:flex-end}
+  .scene .art{position:absolute;inset:0;background-size:cover;background-position:center;filter:saturate(.9) contrast(1.03);transition:background-image .4s}
+  .scene .art.loading::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(224,166,75,.16) 50%,transparent 70%);background-size:200% 100%;animation:shim 1.3s linear infinite}
+  @keyframes shim{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .scene .fog{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 120%, rgba(12,9,15,.92) 0%, transparent 60%),linear-gradient(0deg, rgba(8,6,10,.85) 0%, transparent 55%)}
+  .scene .cap{position:relative;padding:12px 14px;width:100%;display:flex;align-items:center;gap:10px}
+  .scene .cap .loc{font-family:var(--serif);color:var(--gold);font-size:15px;text-shadow:0 2px 6px #000}
+  .scene .cap .clock{margin-left:auto;font-size:12px;color:var(--ember);background:rgba(0,0,0,.4);border-radius:999px;padding:2px 10px}
+
+  .narration{font-family:var(--serif);font-size:clamp(16px,3.4vw,18px);white-space:pre-wrap}
+  .speaker{display:inline-block;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--ember);margin-bottom:6px}
+  .choices{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+  .choice{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:12px 14px;font-size:15px;cursor:pointer;display:flex;gap:10px;align-items:center}
+  .choice:hover{border-color:var(--gold-dim);background:#2c2136}
+  .choice .dot{flex:none;width:22px;height:22px;border-radius:50%;background:#120e16;border:1px solid var(--gold-dim);color:var(--gold);font-size:12px;display:flex;align-items:center;justify-content:center}
+  .choice .tag{margin-left:auto;font-size:12px}.tag.atk{color:var(--bad)}.tag.skill{color:var(--blue)}
+  .freeact{margin-top:12px;display:flex;gap:8px}.freeact input{flex:1}.freeact .btn{flex:none;padding:11px 16px;font-size:15px}
+
+  /* combat + party panel */
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px;margin-top:14px}
+  @media(min-width:760px){.grid2{grid-template-columns:1fr 1fr}}
+  details.acc{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+  details.acc>summary{cursor:pointer;padding:11px 14px;font-family:var(--serif);color:var(--gold);list-style:none;display:flex;align-items:center;gap:8px}
+  details.acc>summary::-webkit-details-marker{display:none}
+  details.acc>summary .ct{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--sans)}
+  details.acc .body{padding:0 14px 12px}
+  .unit{padding:8px 0;border-top:1px solid var(--line)}.unit:first-child{border-top:none}
+  .unit .hd{display:flex;align-items:center;gap:8px;font-size:14px}
+  .unit .em{font-size:18px}.unit b{color:var(--ink)}
+  .unit .meta{margin-left:auto;font-size:11px;color:var(--muted)}
+  .bar{height:9px;border-radius:6px;background:#2a2030;overflow:hidden;margin-top:5px;border:1px solid var(--line)}
+  .bar > i{display:block;height:100%;background:linear-gradient(90deg,var(--hp),#e88);transition:width .4s}
+  .bar.heal > i{background:linear-gradient(90deg,#4a7a3e,var(--hp2))}
+  .unit.downed{opacity:.55}.unit.downed b::after{content:" · düşkün";color:var(--bad);font-size:11px}
+  .unit.dead{opacity:.35;text-decoration:line-through}
+  .enemyzone{border:1px solid var(--bad);}
+  .combat-banner{display:flex;align-items:center;gap:8px;background:#2a161a;border:1px solid var(--bad);border-radius:10px;padding:7px 12px;margin-bottom:8px;color:#f0c0c0;font-size:13px}
+
+  /* map */
+  .mapwrap{border:1px solid var(--line);border-radius:12px;background:#120e16;padding:6px;margin-top:14px}
+  .mapwrap svg{width:100%;height:auto;display:block}
+  .mnode{cursor:default}
+  .mnode .nlabel{font-size:8px;fill:var(--ink-dim);font-family:var(--sans)}
+  .mnode.cur .ndot{fill:var(--gold);stroke:#fff}
+  .mnode.cur .nlabel{fill:var(--gold)}
+  .mnode.seen .ndot{fill:#5a4768}
+  .mnode.fog .ndot{fill:#241b2b;stroke:#352a40}
+  .mnode.fog .nlabel{fill:#5a4d66}
+  .medge{stroke:#3a2d46;stroke-width:2}
+  .medge.seen{stroke:#6a4f8a}
+
+  /* roll modal */
+  .modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(6,4,8,.74);backdrop-filter:blur(3px);animation:fade .2s}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .modalcard{position:relative;width:100%;max-width:440px;background:linear-gradient(180deg,#241b2b 0%,#160f1d 100%);border:1px solid var(--gold-dim);border-radius:18px;padding:22px 20px 20px;box-shadow:0 22px 60px rgba(0,0,0,.6);animation:pop .3s cubic-bezier(.2,1.3,.4,1)}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:none;opacity:1}}
+  .modalcard .avatar{position:absolute;top:-26px;left:-8px;display:flex;flex-direction:column;align-items:center;gap:3px}
+  .modalcard .avatar .face{width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;background:#120e16;border:3px solid var(--gold);box-shadow:0 6px 16px rgba(0,0,0,.5)}
+  .modalcard .avatar .nm{font-size:11px;color:var(--ink-dim);background:rgba(0,0,0,.5);padding:1px 8px;border-radius:999px}
+  .modalcard h3{font-family:var(--serif);color:var(--gold);text-align:center;font-size:18px;margin:6px 0 2px}
+  .modalcard .dc{text-align:center;color:var(--ink-dim);font-size:13px;margin-bottom:14px}
+  .modalcard .dc .tgt{color:var(--bad)}
+  .whoSel{margin-bottom:14px}
+  .bigdie-wrap{display:flex;flex-direction:column;align-items:center;gap:6px;margin:6px 0 12px}
+  .bigdie{width:100px;height:100px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-weight:800;font-size:50px;color:var(--gold);background:radial-gradient(120% 120% at 30% 25%,#33263f,#140e1b);border:2px solid var(--gold-dim);box-shadow:0 10px 26px rgba(0,0,0,.5)}
+  .bigdie.rolling{animation:tumble .12s linear infinite}
+  @keyframes tumble{0%{transform:rotate(-12deg) scale(1.02)}50%{transform:rotate(10deg) scale(.96)}100%{transform:rotate(-6deg) scale(1.03)}}
+  .bigdie.settle{animation:land .45s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes land{0%{transform:scale(1.25)}100%{transform:none}}
+  .formula{font-size:15px;color:var(--ink-dim);min-height:22px;text-align:center}.formula .tot{color:var(--ink);font-weight:700}
+  .outcome{text-align:center;font-family:var(--serif);font-size:21px;font-weight:800;min-height:30px}
+  .outcome.ok{color:var(--ok)}.outcome.partial{color:var(--warn)}.outcome.bad{color:var(--bad)}
+  .dmgline{text-align:center;color:var(--bad);font-weight:700;font-size:15px;min-height:20px}
+  .modal .row{margin-top:6px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#241b2b;border:1px solid var(--gold-dim);color:var(--ink);padding:11px 18px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:14px;z-index:80;max-width:90vw;text-align:center}
+  .typing{display:inline-flex;gap:4px;align-items:center;color:var(--muted)}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--gold-dim);animation:bl 1s infinite}
+  .typing i:nth-child(2){animation-delay:.2s}.typing i:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,100%{opacity:.3}50%{opacity:1}}
+  .winbanner{border:1px solid var(--gold);background:linear-gradient(180deg,#33240f,#1c1610);border-radius:14px;padding:16px;text-align:center;margin-top:14px}
+  .winbanner h2{color:var(--gold);font-size:22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <div class="title" id="gameTitle">🐉 Sönen Ocak</div>
+      <div class="sub">D&D macerası · daha karanlık ton · 13+</div>
+    </div>
+    <div class="spacer"></div>
+    <a class="iconbtn" href="index.html" title="Gizem oyununa dön">🔍 Gizem</a>
+    <button class="iconbtn hidden" id="btnReset">↺ Yeni Oyun</button>
+  </div>
+
+  <!-- ===================== SETUP ===================== -->
+  <div id="setup">
+    <div class="card">
+      <h2 style="color:var(--gold)">🕯️ Sönen Ocak — Karaköz'ün Üç Gecesi</h2>
+      <p class="muted" id="advIntro" style="margin-top:8px"></p>
+      <p class="muted" style="margin-top:8px;font-style:italic">⚠️ Daha karanlık ton: gerçek ölüm riski, kasvetli atmosfer — ama grafik kan/dehşet yok. Sertliği oyun içinde Anlatıcı ayarlar.</p>
+    </div>
+
+    <div class="card">
+      <h2 style="color:var(--gold)">Ayarlar</h2>
+      <label>Anlatıcı (DM) kaynağı</label>
+      <select id="aiSource">
+        <option value="local">Yerel sunucu — Claude planım (ücretsiz)</option>
+        <option value="api">Claude API — anahtarımla (ücretli)</option>
+      </select>
+      <div id="apiKeyWrap">
+        <label>Anthropic API anahtarı</label>
+        <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div>
+          <label>Anlatıcı modeli</label>
+          <select id="model">
+            <option value="claude-sonnet-4-6">Sonnet 4.6 — dengeli</option>
+            <option value="claude-opus-4-8">Opus 4.8 — en yetenekli</option>
+            <option value="claude-haiku-4-5-20251001">Haiku 4.5 — hızlı & ucuz</option>
+          </select>
+        </div>
+        <div>
+          <label>Görsel</label>
+          <select id="artMode">
+            <option value="pollinations">Ücretsiz AI görsel (Pollinations) ⭐</option>
+            <option value="gradient">Atmosferik renk — bedava</option>
+            <option value="server">Yerel sunucu (SD / Gemini)</option>
+            <option value="off">Kapalı</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="color:var(--gold)">Kahramanlar</h2>
+      <p class="muted">Her oyuncu bir kahraman: isim + sınıf seç (1–4 kişi).</p>
+      <div id="heroes"></div>
+      <button class="btn ghost" id="addHero" style="margin-top:12px">+ Kahraman ekle</button>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <button class="btn" id="startBtn">⚔️ Maceraya Başla</button>
+      <div class="err" id="setupErr"></div>
+    </div>
+  </div>
+
+  <!-- ===================== GAME ===================== -->
+  <div id="game" class="hidden">
+    <div class="scene" id="scene">
+      <div class="art" id="sceneArt"></div><div class="fog"></div>
+      <div class="cap"><span class="loc" id="sceneLoc">Karaköz</span><span class="clock" id="sceneClock">1. Gece</span></div>
+    </div>
+
+    <div class="card">
+      <div class="speaker" id="speaker">DM</div>
+      <div class="narration" id="narration"></div>
+      <div class="choices" id="choices"></div>
+      <div class="freeact">
+        <input id="freeInput" placeholder="Kendi eylemini yaz… (ör. 'meşaleyi yak', 'Torgay'la konuş')" />
+        <button class="btn" id="freeBtn">Yap</button>
+      </div>
+      <div class="err" id="gameErr"></div>
+    </div>
+
+    <div id="combatHost"></div>
+
+    <div class="grid2">
+      <details class="acc" open>
+        <summary>🛡️ Takım<span class="ct" id="partyCt"></span></summary>
+        <div class="body" id="party"></div>
+      </details>
+      <details class="acc">
+        <summary>🎒 Eşyalar & Notlar<span class="ct" id="noteCt"></span></summary>
+        <div class="body" id="notes"></div>
+      </details>
+    </div>
+
+    <details class="acc" open style="margin-top:14px">
+      <summary>🗺️ Harita<span class="ct" id="mapCt"></span></summary>
+      <div class="body"><div class="mapwrap" id="mapWrap"></div></div>
+    </details>
+  </div>
+</div>
+
+<!-- roll modal -->
+<div id="rollModal" class="modal hidden">
+  <div class="modalcard">
+    <div class="avatar"><div class="face" id="rollFace">🛡️</div><div class="nm" id="rollName">Kahraman</div></div>
+    <h3 id="rollTitle">Saldırı</h3>
+    <div class="dc" id="rollDc">Zorluk 13</div>
+    <div class="whoSel" id="rollWhoWrap"></div>
+    <div class="bigdie-wrap"><div class="bigdie" id="bigDie">?</div><div class="formula" id="rollFormula"></div></div>
+    <div class="outcome" id="rollOutcome"></div>
+    <div class="dmgline" id="rollDmg"></div>
+    <div class="row" id="rollActions"><button class="btn" id="rollGo">🎲 Zar At</button></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* =====================================================================
+   SÖNEN OCAK — oynanabilir D&D modu (anlatımlı savaş + CP paneli + harita)
+   Aynı motor/JSON sözleşmesi; gizem oyunundan (index.html) bağımsız sayfa.
+   ===================================================================== */
+
+/* ---------- 1. SINIFLAR (Başlangıç Paketi) ---------- */
+const CLASSES = {
+  sovalye:{label:"Şövalye", emoji:"⚔️", desc:"güçlü, korkusuz, önden gider",
+    skills:{guc:5,ceviklik:1,dayaniklilik:4,zeka:0,cazibe:1}, cp:14, zs:16, atk:5, dmg:"1d8",
+    weapon:"Kılıç ve Kalkan", power:"Kalkan Duvarı — bir tur bir arkadaşının önüne geçip saldırıyı kendine çeker"},
+  izci:{label:"İzci", emoji:"🏹", desc:"sessiz, keskin nişancı, iz okur",
+    skills:{guc:1,ceviklik:5,dayaniklilik:2,zeka:2,cazibe:1}, cp:11, zs:14, atk:5, dmg:"1d8",
+    weapon:"Yay (uzaktan)", power:"Keskin Göz — günde bir kez bir ok garanti isabet eder"},
+  buyucu:{label:"Büyücü", emoji:"🔮", desc:"ateş, ışık ve sihir",
+    skills:{guc:0,ceviklik:2,dayaniklilik:1,zeka:5,cazibe:2}, cp:9, zs:12, atk:5, dmg:"1d10",
+    weapon:"Ateş Topu / büyüler", power:"Günde 3 büyü; Sihirli Işık ölü/lanetli yaratıklara +2 hasar"},
+  ozan:{label:"Ozan", emoji:"🎵", desc:"tatlı dilli, cesaret verir",
+    skills:{guc:1,ceviklik:3,dayaniklilik:1,zeka:2,cazibe:5}, cp:10, zs:13, atk:3, dmg:"1d4",
+    weapon:"Hançer", power:"Cesaret Şarkısı — bir arkadaşın sonraki zarına +5; Tatlı Dil"},
+};
+const SKILL_LABELS = {guc:"Güç",ceviklik:"Çeviklik",dayaniklilik:"Dayanıklılık",zeka:"Zekâ",cazibe:"Cazibe",saldiri:"Saldırı"};
+
+/* ---------- 2. MACERA PAKETİ: Sönen Ocak ---------- */
+const ADVENTURE = {
+  id:"sonen_ocak", title:"Sönen Ocak", emoji:"🐉",
+  style_anchor:"painterly dark fantasy, visible brushwork, cold dying hearth-fire glow, grim mountain village and ancient barrow crypt, ash and fog, ominous and tense, light grain",
+  setting:"the grim mountain village of Karaköz and the ancient barrow crypt beneath the dying sacred hearth-fire",
+  intro:"Dağ köyü Karaköz'ün nesillerdir sönmeyen kutsal Ocağı sönüyor. Sönerse, tepedeki Kül Höyüğü'nde mühürlü yas-büyücüsü Külrengi Vechan ve ölüler uyanacak. Üç geceniz var: höyüğe inin, ateşi kimin söndürdüğünü bulun ve Kutsal Köz'ü mührün kalbine geri taşıyıp Vechan'ı yeniden bağlayın.",
+  locations:[
+    {key:"karakoz_meydani",label:"Karaköz Meydanı",note:"sönen ocak, tuz dökülü eşikler",x:42,y:34},
+    {key:"demirci_dukkani",label:"Demirci Dükkânı",note:"soğumuş ocak, is kokusu — Torgay'ın izi",x:42,y:104},
+    {key:"hoyuk_agzi",label:"Höyük Ağzı",note:"aralık kapak taşı, 'Uyandırma' yazısı",x:108,y:34},
+    {key:"coken_gecit",label:"Çöken Geçit",note:"oynak tavanlı tuzak koridor",x:152,y:66},
+    {key:"iskelet_odasi",label:"İskelet Nöbeti",note:"taş lahitler, meşale yuvası",x:200,y:38},
+    {key:"gulyabani_cukuru",label:"Gulyabani Çukuru",note:"kemik yığını, aç gözler",x:240,y:78},
+    {key:"yas_aynasi",label:"Yas Aynası Odası",note:"kara su havuzu, fısıltılar",x:258,y:132},
+    {key:"kulrengi_kapi",label:"Külrengi Bekçi Kapısı",note:"yüzsüz zırhlı bekçi",x:206,y:160},
+    {key:"ic_oda",label:"İç Oda — Ritüel",note:"mührün kalbi; Torgay ve Vechan",x:144,y:150},
+  ],
+  edges:[["karakoz_meydani","demirci_dukkani"],["karakoz_meydani","hoyuk_agzi"],["hoyuk_agzi","coken_gecit"],
+    ["coken_gecit","iskelet_odasi"],["iskelet_odasi","gulyabani_cukuru"],["gulyabani_cukuru","yas_aynasi"],
+    ["yas_aynasi","kulrengi_kapi"],["kulrengi_kapi","ic_oda"]],
+  startLoc:"karakoz_meydani",
+  npcs:[
+    {key:"nene_surmeli",label:"Nene Sürmeli",note:"yaşlı ocak-bekçisi; gerçeğin yarısını bilir"},
+    {key:"demirci_torgay",label:"Demirci Torgay",note:"kızını kaybetmiş baba; ateşi söndüren — ama farkında değil"},
+    {key:"kucuk_maral",label:"Küçük Maral",note:"İnci'nin arkadaşı; geceleri 'İnci'yi höyük yolunda gördüm' diyor"},
+  ],
+  bestiary:{
+    iskelet:{label:"Höyük İskeleti", cp:7, zs:13, atk:3, dmg:"1d6", note:"ışık/ateşle +2 hasar alır"},
+    gulyabani:{label:"Mezar Gulyabanisi", cp:12, zs:13, atk:4, dmg:"1d6", note:"vurunca Dayanıklılık 13 ya da 1 tur uyuşma"},
+    bekci:{label:"Külrengi Bekçi", cp:18, zs:15, atk:5, dmg:"1d8", note:"Korku Hâlesi; köz/ateş vurunca ZS 11'e düşer"},
+    vechan:{label:"Külrengi Vechan", cp:30, zs:16, atk:6, dmg:"1d10", note:"BOSS; iskelet çağırır; Yas Dalgası; höyükten çıkamaz"},
+  },
+  // GM'in gizli senaryosu (oyuncuya ASLA açık etme)
+  gmBible:`
+GİZLİ GERÇEK (asla doğrudan açıklama):
+Karaköz'ün Sönmeyen Ocağı, Kül Höyüğü'ndeki ölüleri ve yas-büyücüsü KÜLRENGİ VECHAN'ı mühürler.
+Vechan yüzyıllar önce ölen sevdiğini geri getirmeye çalışırken kendini höyüğe bağlatmış, yastan
+çürümüş bir lord. ÜÇ gündür Ocak sönüyor çünkü demirci TORGAY, kızı İnci'yi geçen kış hummadan
+kaybetti ve bir efsaneye inanıp her gece Ocak'tan KUTSAL KÖZ çalıp höyüğe taşıyarak mührü besliyor;
+Vechan ona İnci'yi vaat ediyor. Ama bedel: mühür çözülür, BÜTÜN ölüler dirilir, köy düşer.
+Ocak YENİ AYA ÜÇ GECE kala sönecek; o an mühür kırılır.
+
+GÖREV: Kahramanlar höyüğe inip Torgay'ı durdurmalı ve KUTSAL KÖZ'ü mührün kalbine (ic_oda) geri
+taşıyıp Vechan'ı yeniden bağlamalı — üçüncü geceden önce.
+
+YAPI (sırayı oyuncu kararları belirler, dümen tutma):
+1. karakoz_meydani: Nene Sürmeli yardım ister. İpuçları (gozlem/zeka/cazibe ile): patikada demirci
+   cürufu; Küçük Maral 'İnci'yi höyük yolunda gördüm, babası peşinden gidiyor' der; demirci dükkânı soğuk.
+   Gece düşerken meydanı 2 iskelet basar (combat_start: iskelet x2) — öğretici savaş.
+2. hoyuk_agzi → coken_gecit: Çöken Geçit tuzağı (Çeviklik 13 ya da 1d6 hasar).
+3. iskelet_odasi: 3 iskelet (zayıf masada 2); meşale yuvası yakılırsa iskeletler +2 hasar alır.
+   Taze çekiç izi/köz parçası: Torgay buradan geçmiş.
+4. gulyabani_cukuru: 2 gulyabani.
+5. yas_aynasi: SAVAŞ YOK. Kara su her kahramana kaybettiği birini gösterir ve geri vermeyi vaat eder
+   (bu Vechan'ın sesidir). Çıkmak için Zekâ/Cazibe 13. Kimin neyi özlediğini AKILDA TUT; Vechan finalde
+   bunu sözle hedef alır.
+6. kulrengi_kapi: Külrengi Bekçi (mini-boss). Düşünce demir anahtar + Torgay'ın çekici çıkar; ic_oda açılır.
+7. ic_oda: Torgay ritüel başında, közleri Vechan'ın mührüne besliyor. ÖNCE SEÇİM, sonra savaş:
+   - Torgay'ı konuşturmak (Cazibe/Zekâ 15; oyuncular kendi yaslarını rol yaparsa +3): çöker, yardımcı olur.
+   - Vechan'la pazarlık (tuzak): kabul eden olursa mühür kırılır → "Kül Şafağı" kötü finaline git.
+   - Saldırı: Torgay engeller (Güç 13), Vechan uyanır.
+8. DORUK: Vechan (boss, combat_start: vechan x1). İki kazanma yolu:
+   a) Kutsal Köz'ü ic_oda'daki mührün kalbine taşıyıp yakmak: taşıyan her tur Yas Dalgası'na maruz;
+      yere ulaşmak için ardışık 2 başarı (Çeviklik/Dayanıklılık 13). Konunca Vechan yeniden mühürlenir (zafer).
+   b) Vechan'ın CP'sini 0'lamak (uzun ve ölümcül).
+
+ÜÇ GECELİK SAAT: night değişkeni 1→3. Büyük başarısızlık/çok oyalanmada bir gece ilerlet
+(state_changes.advance_night:true). 3. gece biterse "Karaköz Düştü" finali.
+
+FİNALLER:
+- "Sönmeyen Ocak" (bittersweet zafer): köz mühre konur, Vechan bağlanır, Ocak yeniden parlar; ama İnci
+  geri gelmez, Torgay yas tutar. Köy kurtulur. → adventure_won:true.
+- "Kül Şafağı" (karanlık): pazarlık kabul edildi/köz konamadı → Vechan yükselir, köy düşer. → adventure_lost:true.
+- "Karaköz Düştü" (saat doldu): üçüncü gece bitti → kayıp, bir sonraki seansa kanca.
+
+TON: kasvetli, gergin, trajik. Vechan FISILDAR, bağırmaz. Torgay YALVARIR. Grafik kan/dehşet/işkence YOK.
+En güçlü zafer kılıçla değil, bir SEÇİMLE kazanılır. Dayanışmayı (Ozan'ın şarkısı, cesaret) ödüllendir.
+`.trim(),
+};
+
+/* ---------- 3. ANLATICI (DM) SİSTEM PROMPT'U — D&D ---------- */
+const DND_SYSTEM = `
+## Rolün
+Sen bir aile için (en küçük ~13) DAHA KARANLIK tonda bir Zindanlar & Ejderhalar macerasının
+Anlatıcısısın (DM). Sahneyi canlandırır, düşmanları yönetir, savaşı ve keşfi sürdürürsün.
+Sana CAMPAIGN_BIBLE içinde gizli senaryo verilir; ona sadık kal ama çözümü/sırları ASLA doğrudan açıklama.
+
+## Ton
+- Kasvetli, gergin, trajik bir kahramanlık fantezisi. Gerilim sözcüklerle kurulur.
+- Grafik kan, dehşet, işkence, cinsellik YOK. Ölüm gerçek bir tehdit olabilir ama betimleme ölçülü olsun.
+- Anlatım kısa-orta (1-2 paragraf, Türkçe). Her turun sonunda 2-4 somut seçenek sun.
+- Oyuncular uygunsuz/aşırı karanlık bir yöne giderse kurgu içinde nazikçe dengele.
+
+## Zarlar — sonucu SEN UYDURMA (oyuncu eylemleri)
+- Belirsiz oyuncu eylemlerinde (saldırı, gizlenme, ikna, tuzak, çıkarım) roll_request döndür.
+- Motor zarı atar ve sonucu LAST_ROLL_RESULT olarak verir; sahneyi ona göre anlatırsın.
+- Beceriler: guc, ceviklik, dayaniklilik, zeka, cazibe. SALDIRI için skill:"saldiri" ve target:"<düşman_key>",
+  dc = hedefin ZS'si. Bir seçenek zar gerektiriyorsa requires_roll:true ve roll alanını doldur.
+
+## Savaş
+- Savaş başlatmak için state_changes.combat_start ver: bestiary anahtarlarıyla, ör.
+  {"enemies":[{"bestiary":"iskelet","count":2}]}. Motor düşmanları örnekler (key: iskelet_1, iskelet_2 ...)
+  ve CP'lerini İZLER; ENEMY_STATE bağlamında sana güncel CP'leri verir. Düşman CP'sini SEN yazma.
+- Oyuncu saldırısının isabet/hasarını MOTOR hesaplar (LAST_ROLL_RESULT'ta görürsün). Sen sonucu anlatırsın.
+- DÜŞMAN saldırılarını SEN yönetirsin: state_changes.enemy_attacks = [{"enemy_key":"iskelet_1",
+  "target":"<kahraman adı>","hit":true/false,"damage":<sayı>,"note":"..."}]. Adil ol (bestiary atk/dmg'a uy).
+- Bir kahraman 0 CP'ye düşerse 'düşkün' olur; CAMPAIGN_BIBLE'daki ölüm kuralına göre oyna, hemen öldürme.
+- Tüm düşmanlar yenilince ya da kaçınca state_changes.combat_end:true ver.
+
+## Harita & ilerleme
+- Takım bir mekâna geçtiğinde state_changes.current_location:"<key>" ver (haritada oraya taşınır, açılır).
+- Henüz girilmemiş ama görünür olan komşu mekânları state_changes.reveal_locations:["key",...] ile aç.
+- Yalnız ENTITY_REGISTRY'deki kararlı key'leri kullan; yeni bir şey girince scene_entities'e ekle.
+
+## Saat ve final
+- Üç gecelik saat: büyük başarısızlık/oyalanmada state_changes.advance_night:true.
+- Zafer kazanılınca state_changes.flags_set:{"adventure_won":true}; kötü son için {"adventure_lost":true}.
+
+## ÇIKTI — KATI JSON (yalnız bu, başka metin/`+"```"+` yok)
+{
+ "narration":"...","speaker":"DM veya konuşan kişi",
+ "scene_entities":[{"type":"location|npc|monster|item","key":"slug","label":"Ad"}],
+ "choices":[{"id":"c1","text":"...","requires_roll":false,"roll":{"skill":"saldiri","dc":13,"target":"iskelet_1"}}],
+ "roll_request":null,
+ "state_changes":{"current_location":null,"reveal_locations":[],"combat_start":null,"combat_end":false,
+   "enemy_attacks":[],"hero_hp":[],"advance_night":false,"flags_set":{},"inventory_add":[],"notes_add":[]},
+ "image":{"primary_entity_key":"key","shot":"wide|portrait|detail"}
+}
+- roll_request örneği (saldırı): {"skill":"saldiri","dice":"d20","dc":13,"for_choice":"c2","target":"iskelet_1"}
+- roll_request örneği (beceri): {"skill":"ceviklik","dice":"d20","dc":13,"for_choice":"c1"}
+- Sonucu zardan ÖNCE açıklama; gerçek sonuç zar sonrası narration'da çıkar.
+`.trim();
+
+/* ---------- 4. DURUM ---------- */
+let S=null;
+const LS_KEY="dnd_save_v1", LS_CFG="sfk_cfg_v1"; // cfg gizem oyunuyla paylaşılır
+const $=id=>document.getElementById(id);
+function toast(m,ms=2600){const t=$("toast");t.textContent=m;t.classList.remove("hidden");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.add("hidden"),ms);}
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));}
+function rollDice(spec){const m=/(\d+)d(\d+)([+-]\d+)?/.exec(spec||"1d6");if(!m)return 1;let t=0,n=+m[1],f=+m[2],b=m[3]?+m[3]:0;for(let i=0;i<n;i++)t+=1+Math.floor(Math.random()*f);return t+b;}
+
+function freshState(heroes,cfg){
+  const registry={};
+  [["location",ADVENTURE.locations],["npc",ADVENTURE.npcs]].forEach(([type,arr])=>arr.forEach(e=>registry[e.key]={type,key:e.key,label:e.label,note:e.note,discovered:false}));
+  registry[ADVENTURE.startLoc].discovered=true;
+  return {cfg, heroes, registry, inventory:[], notes:[], flags:{}, summaryNotes:[], recentTurns:[],
+    lastRoll:null, combat:{active:false,round:1,enemies:[]}, currentLoc:ADVENTURE.startLoc,
+    mapRevealed:{[ADVENTURE.startLoc]:true}, night:1, solved:false, lost:false, started:false};
+}
+
+/* ---------- 5. SETUP ---------- */
+let heroDrafts=[];
+function addHero(name=""){ if(heroDrafts.length>=4){toast("En fazla 4 kahraman.");return;} heroDrafts.push({name,cls:"sovalye"}); renderHeroes(); }
+function renderHeroes(){
+  const host=$("heroes"); host.innerHTML="";
+  heroDrafts.forEach((d,i)=>{
+    const el=document.createElement("div"); el.className="hero";
+    el.innerHTML=`<div style="display:flex;gap:8px;align-items:center">
+        <input data-i="${i}" class="hname" placeholder="Kahraman adı" value="${esc(d.name)}" style="flex:1"/>
+        ${heroDrafts.length>1?`<button class="rmh" data-rm="${i}">kaldır</button>`:""}</div>
+      <div class="classes">${Object.entries(CLASSES).map(([k,c])=>`
+        <div class="cls ${d.cls===k?"on":""}" data-cls="${i}:${k}">
+          <span class="em">${c.emoji}</span><b>${c.label}</b><small>${c.desc}</small>
+          <div class="st">CP ${c.cp} · ZS ${c.zs} · Saldırı +${c.atk} (${c.dmg})</div>
+        </div>`).join("")}</div>`;
+    host.appendChild(el);
+  });
+  host.querySelectorAll(".hname").forEach(inp=>inp.oninput=e=>heroDrafts[+e.target.dataset.i].name=e.target.value);
+  host.querySelectorAll("[data-rm]").forEach(b=>b.onclick=e=>{heroDrafts.splice(+e.target.dataset.rm,1);renderHeroes();});
+  host.querySelectorAll("[data-cls]").forEach(b=>b.onclick=e=>{const[i,k]=e.currentTarget.dataset.cls.split(":");heroDrafts[+i].cls=k;renderHeroes();});
+}
+function loadCfg(){let c={};try{c=JSON.parse(localStorage.getItem(LS_CFG)||"{}");}catch(e){}
+  $("aiSource").value=c.aiSource||(IS_LOCAL?"local":"api"); if(c.apiKey)$("apiKey").value=c.apiKey;
+  if(c.model)$("model").value=c.model; $("artMode").value=(c.artMode&&["pollinations","gradient","server","off"].includes(c.artMode))?c.artMode:"pollinations";
+  updateSourceVis();}
+function readCfg(){return{aiSource:$("aiSource").value,apiKey:$("apiKey").value.trim(),model:$("model").value,artMode:$("artMode").value,imgKey:(()=>{try{return JSON.parse(localStorage.getItem(LS_CFG)||"{}").imgKey||"";}catch(e){return"";}})()};}
+function updateSourceVis(){$("apiKeyWrap").classList.toggle("hidden",$("aiSource").value==="local");}
+const IS_LOCAL=["localhost","127.0.0.1",""].includes(location.hostname);
+
+/* ---------- 6. DM çağrısı ---------- */
+function heroSheet(h){const c=CLASSES[h.cls];return{ad:h.name,sinif:c.label,cp:h.cp,cp_max:h.cpMax,zs:c.zs,saldiri:"+"+c.atk,hasar:c.dmg,beceriler:c.skills,guc_yetenegi:c.power,durum:h.downed?"düşkün":"ayakta"};}
+function buildContext(action){
+  const heroes=S.heroes.map(heroSheet);
+  const registry=Object.values(S.registry).map(e=>({type:e.type,key:e.key,label:e.label}));
+  const enemies=S.combat.active?S.combat.enemies.map(e=>({key:e.key,label:e.label,cp:e.cp,cp_max:e.cpMax,zs:e.zs,defeated:e.defeated})):[];
+  const recent=S.recentTurns.slice(-6).map(t=>`Oyuncu: ${t.action}\nDM: ${t.narration}`).join("\n---\n");
+  return [
+    "## CAMPAIGN_BIBLE (GİZLİ — asla açık etme)", ADVENTURE.gmBible,
+    "\n## ADVENTURE", `${ADVENTURE.title} — ${ADVENTURE.intro}`,
+    "\n## BESTIARY (savaş başlatırken bu anahtarları kullan)", JSON.stringify(ADVENTURE.bestiary),
+    "\n## HERO_SHEETS", JSON.stringify(heroes),
+    "\n## ENTITY_REGISTRY", JSON.stringify(registry),
+    "\n## CURRENT_LOCATION", S.currentLoc,
+    "\n## NIGHT", String(S.night)+"/3",
+    "\n## COMBAT", S.combat.active?"AKTİF":"yok",
+    "\n## ENEMY_STATE (motorun izlediği güncel CP'ler)", JSON.stringify(enemies),
+    "\n## STORY_SUMMARY", S.summaryNotes.length?S.summaryNotes.map(n=>"- "+n).join("\n"):"(macera yeni başladı)",
+    "\n## RECENT_TURNS", recent||"(yok)",
+    "\n## LAST_ROLL_RESULT", S.lastRoll?JSON.stringify(S.lastRoll):"null",
+    "\n## PLAYER_ACTION", action,
+  ].join("\n");
+}
+async function callDM(action){
+  const sys=DND_SYSTEM+"\n\n# ----- BU TURUN BAĞLAMI -----\n"+buildContext(action);
+  if(S.cfg.aiSource==="local") return callLocal(sys);
+  const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",
+    headers:{"content-type":"application/json","x-api-key":S.cfg.apiKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+    body:JSON.stringify({model:S.cfg.model,max_tokens:1200,system:sys,
+      messages:[{role:"user",content:(action||"Macerayı başlat ve açılış sahnesini anlat.")+"\n\nYALNIZCA tek geçerli JSON nesnesi döndür."}]})});
+  if(!res.ok){let d="";try{d=(await res.json()).error?.message||"";}catch(e){}throw new Error("API "+res.status+": "+d);}
+  const data=await res.json();
+  return parseJson((data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join(""));
+}
+async function callLocal(sys){
+  const prompt=sys+"\n\n# GÖREV\nYukarıdaki bağlama göre Anlatıcı olarak tek bir tur üret. Hiçbir araç kullanma. Yanıt SADECE geçerli JSON nesnesi olsun.";
+  const r=await fetch("/api/dm",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt,model:S.cfg.model})});
+  let j={};try{j=await r.json();}catch(e){} if(!r.ok||!j.ok)throw new Error(j.error||("Yerel sunucu "+r.status+". 'node server.js' çalışıyor mu?"));
+  return parseJson(j.result);
+}
+function parseJson(text){let t=(text||"").trim().replace(/^```(json)?/i,"").replace(/```$/,"").trim();const a=t.indexOf("{"),b=t.lastIndexOf("}");if(a>=0&&b>a)t=t.slice(a,b+1);return JSON.parse(t);}
+
+/* ---------- 7. Tur ---------- */
+function setBusy(on){$("freeBtn").disabled=on;$("freeInput").disabled=on;document.querySelectorAll(".choice").forEach(c=>c.style.pointerEvents=on?"none":"");}
+function showTyping(){$("narration").innerHTML='<span class="typing">Anlatıcı düşünüyor <i></i><i></i><i></i></span>';$("choices").innerHTML="";$("speaker").textContent="DM";}
+async function takeTurn(action){
+  $("gameErr").textContent=""; setBusy(true); showTyping();
+  try{
+    const dm=await callDM(action);
+    if(action) S.recentTurns.push({action,narration:(dm.narration||"").slice(0,400)});
+    applyDM(dm); renderDM(dm); save();
+  }catch(err){
+    $("narration").innerHTML='<span class="muted">Anlatıcı sustu…</span>'; $("gameErr").textContent="Hata: "+err.message;
+    $("choices").innerHTML=""; const b=document.createElement("button");b.className="choice";b.innerHTML='<span class="dot">↺</span> Tekrar dene';b.onclick=()=>takeTurn(action);$("choices").appendChild(b);
+  }finally{setBusy(false);}
+}
+function applyDM(dm){
+  (dm.scene_entities||[]).forEach(e=>{if(!e||!e.key)return;if(!S.registry[e.key])S.registry[e.key]={type:e.type||"item",key:e.key,label:e.label||e.key,note:"",discovered:true};else S.registry[e.key].discovered=true;if(e.label)S.registry[e.key].label=e.label;});
+  const sc=dm.state_changes||{};
+  // konum / harita
+  if(sc.current_location){S.currentLoc=sc.current_location;S.mapRevealed[sc.current_location]=true;if(S.registry[sc.current_location])S.registry[sc.current_location].discovered=true;}
+  (sc.reveal_locations||[]).forEach(k=>{S.mapRevealed[k]=true;});
+  // savaş başlat
+  if(sc.combat_start&&sc.combat_start.enemies){
+    S.combat.active=true;S.combat.round=1;S.combat.enemies=[];
+    sc.combat_start.enemies.forEach(spec=>{const b=ADVENTURE.bestiary[spec.bestiary];if(!b)return;const n=spec.count||1;
+      for(let i=0;i<n;i++){const key=spec.bestiary+(n>1?("_"+(i+1)):"");S.combat.enemies.push({key,label:b.label+(n>1?(" "+(i+1)):""),cp:b.cp,cpMax:b.cp,zs:b.zs,atk:b.atk,dmg:b.dmg,note:b.note||"",defeated:false});}});
+  }
+  // düşman saldırıları (GM hakemliği)
+  (sc.enemy_attacks||[]).forEach(a=>{if(a.hit===false)return;const hero=S.heroes.find(h=>h.name===a.target&&!h.dead)||S.heroes.find(h=>!h.downed&&!h.dead);if(!hero)return;const dmg=Math.max(0,a.damage|0);hero.cp=Math.max(0,hero.cp-dmg);if(hero.cp===0)hero.downed=true;});
+  // can değişimi / iyileşme
+  (sc.hero_hp||[]).forEach(h=>{const hero=S.heroes.find(x=>x.name===h.name);if(!hero)return;hero.cp=Math.max(0,Math.min(hero.cpMax,hero.cp+(h.delta|0)));hero.downed=hero.cp===0;});
+  if(sc.combat_end){S.combat.active=false;S.combat.enemies=[];}
+  if(sc.advance_night){S.night=Math.min(3,S.night+1);}
+  (sc.inventory_add||[]).forEach(it=>{if(it&&!S.inventory.includes(it))S.inventory.push(it);});
+  (sc.notes_add||[]).forEach(n=>{if(n&&!S.notes.includes(n)){S.notes.push(n);S.summaryNotes.push(n);}});
+  if(sc.flags_set&&typeof sc.flags_set==="object")Object.assign(S.flags,sc.flags_set);
+  if(S.flags.adventure_won)S.solved=true; if(S.flags.adventure_lost)S.lost=true;
+  if(S.summaryNotes.length>40)S.summaryNotes=S.summaryNotes.slice(-40);
+  if(S.recentTurns.length>12)S.recentTurns=S.recentTurns.slice(-12);
+  S.lastRoll=null;
+}
+
+/* ---------- 8. Render ---------- */
+function renderDM(dm){
+  $("speaker").textContent=dm.speaker||"DM";
+  $("narration").textContent=dm.narration||"(boş sahne)";
+  renderScene(dm.image);
+  const choices=(dm.choices||[]).filter(c=>c&&c.text); const rr=dm.roll_request;
+  $("choices").innerHTML="";
+  choices.forEach((c,i)=>{
+    const roll=c.roll||(rr&&rr.for_choice===c.id?rr:null);
+    const needs=c.requires_roll||!!roll;
+    const isAtk=roll&&(roll.skill==="saldiri"||roll.target);
+    const b=document.createElement("button"); b.className="choice";
+    b.innerHTML=`<span class="dot">${i+1}</span><span>${esc(c.text)}</span>`+
+      (needs&&roll?`<span class="tag ${isAtk?"atk":"skill"}">${isAtk?"⚔️ "+(enemyLabel(roll.target)||"saldırı"):"🎲 "+(SKILL_LABELS[roll.skill]||roll.skill)} · ${isAtk?"ZS":"DC"} ${roll.dc}</span>`:needs?`<span class="tag skill">🎲 zar</span>`:``);
+    b.onclick=()=>{ if(needs&&roll) startRoll({...roll,choiceText:c.text}); else takeTurn(c.text); };
+    $("choices").appendChild(b);
+  });
+  if(!choices.length&&rr) startRoll({...rr,choiceText:"(eylemi dene)"});
+  if(S.solved) banner("🎉 Zafer!","Ocak yeniden parladı. Karaköz kurtuldu — bedeli yas oldu.");
+  else if(S.lost) banner("🌑 Kül Şafağı","Mühür kırıldı; Karaköz düştü. Bir sonraki sefere acı bir kanca kaldı.");
+  renderCombat(); renderParty(); renderNotes(); renderMap();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function enemyLabel(key){const e=S.combat.enemies.find(x=>x.key===key);return e?e.label:null;}
+function renderScene(image){
+  const mode=S.cfg.artMode;
+  $("sceneClock").textContent=S.night+". Gece";
+  if(!image||mode==="off"){$("scene").classList.add("hidden");return;}
+  $("scene").classList.remove("hidden");
+  const key=image.primary_entity_key||S.currentLoc; const ent=S.registry[key];
+  $("sceneLoc").textContent=ent?ent.label:ADVENTURE.title;
+  const art=$("sceneArt"); art.style.backgroundImage=gradientFor(key);art.style.backgroundSize="cover";art.style.backgroundPosition="center";art.classList.remove("loading");
+  if(mode!=="pollinations"&&mode!=="server")return;
+  const ck=key+":"+(image.shot||"wide"); if(imgCache[ck]){art.style.backgroundImage=`url("${imgCache[ck]}")`;return;}
+  const myReq=++imgReqSeq; art.classList.add("loading");
+  genImage(image,mode).then(url=>{imgCache[ck]=url;if(myReq===imgReqSeq){art.style.backgroundImage=`url("${url}")`;art.classList.remove("loading");}else art.classList.remove("loading");})
+    .catch(e=>{art.classList.remove("loading");});
+}
+const imgCache={}; let imgReqSeq=0;
+function gradientFor(key){let h=0;for(const c of (key||"x"))h=(h*31+c.charCodeAt(0))>>>0;const a=h%360,b=(a+40)%360;return `radial-gradient(120% 120% at 30% 20%, hsl(${a} 35% 22%) 0%, hsl(${b} 30% 11%) 55%, #08060a 100%)`;}
+function imgPrompt(image){const ent=S.registry[image.primary_entity_key];const shot={wide:"wide establishing shot",portrait:"character portrait",detail:"close-up detail shot"}[image.shot]||"wide shot";const subj=ent?(ent.type==="npc"?("a person: "+ent.label+(ent.note?", "+ent.note:"")):(ent.label+(ent.note?" — "+ent.note:""))):ADVENTURE.setting;return `${ADVENTURE.style_anchor}. ${shot} of ${subj}. Grim dark-fantasy storybook atmosphere, tense and moody, no gore. No text, no letters, no words.`;}
+function seedFor(s){let h=0;for(const c of (s||"x"))h=(h*31+c.charCodeAt(0))>>>0;return h%1000000;}
+async function genImage(image,mode){const prompt=imgPrompt(image);
+  if(mode==="server"){const r=await fetch("/api/image",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({prompt})});let j={};try{j=await r.json();}catch(e){}if(!r.ok||!j.ok)throw new Error("sunucu");return j.dataUrl;}
+  return genPollinations(prompt,768,512,seedFor((image.primary_entity_key||"")+":"+image.shot));}
+function genPollinations(prompt,w,h,seed){const url=`https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=${w}&height=${h}&nologo=true&model=flux&seed=${seed}`;return new Promise((res,rej)=>{const img=new Image();img.onload=()=>res(url);img.onerror=()=>rej(new Error("pollinations"));img.src=url;});}
+
+function renderCombat(){
+  const host=$("combatHost");
+  if(!S.combat.active||!S.combat.enemies.length){host.innerHTML="";return;}
+  const live=S.combat.enemies.filter(e=>!e.defeated).length;
+  host.innerHTML=`<div class="card enemyzone">
+    <div class="combat-banner">⚔️ SAVAŞ — ${live} düşman ayakta. Saldırmak için aşağıdaki seçeneklerden birini (⚔️) seç ya da kendi eylemini yaz.</div>
+    <div id="enemies"></div></div>`;
+  const e=$("enemies");
+  e.innerHTML=S.combat.enemies.map(en=>{
+    const pct=Math.max(0,Math.round(100*en.cp/en.cpMax));
+    return `<div class="unit ${en.defeated?"dead":""}"><div class="hd"><span class="em">💀</span><b>${esc(en.label)}</b>
+      <span class="meta">ZS ${en.zs} · CP ${en.cp}/${en.cpMax}${en.note?" · "+esc(en.note):""}</span></div>
+      <div class="bar"><i style="width:${pct}%"></i></div></div>`;}).join("");
+}
+function renderParty(){
+  const p=$("party");
+  p.innerHTML=S.heroes.map(h=>{const c=CLASSES[h.cls];const pct=Math.max(0,Math.round(100*h.cp/h.cpMax));const heal=h.cp/h.cpMax>0.5;
+    return `<div class="unit ${h.downed?"downed":""} ${h.dead?"dead":""}"><div class="hd"><span class="em">${c.emoji}</span><b>${esc(h.name)}</b>
+      <span class="meta">${c.label} · ZS ${c.zs} · +${c.atk}/${c.dmg}</span></div>
+      <div class="bar ${heal?"heal":""}"><i style="width:${pct}%"></i></div>
+      <div class="meta" style="margin-top:3px">CP ${h.cp}/${h.cpMax} · ${c.power}</div></div>`;}).join("");
+  $("partyCt").textContent=S.heroes.length+" kahraman";
+}
+function renderNotes(){
+  const n=$("notes");let html="";
+  if(S.inventory.length)html+=`<div style="margin-bottom:6px">${S.inventory.map(i=>`<span class="pill">🎒 ${esc(i)}</span>`).join("")}</div>`;
+  html+=S.notes.length?S.notes.map(x=>`<div class="unit">• ${esc(x)}</div>`).join(""):`<div class="muted">Henüz not yok.</div>`;
+  n.innerHTML=html; $("noteCt").textContent=(S.notes.length||"")?(S.notes.length+" not"):"";
+}
+function renderMap(){
+  const seen=k=>S.mapRevealed[k]||(S.registry[k]&&S.registry[k].discovered);
+  // sınır: görünen düğümlerin komşuları "sis" olarak görünür
+  const frontier={};
+  ADVENTURE.edges.forEach(([a,b])=>{if(seen(a)&&!seen(b))frontier[b]=1;if(seen(b)&&!seen(a))frontier[a]=1;});
+  const visN=ADVENTURE.locations.filter(l=>seen(l.key)||frontier[l.key]);
+  const edges=ADVENTURE.edges.filter(([a,b])=>(seen(a)||frontier[a])&&(seen(b)||frontier[b]));
+  const W=300,H=200;
+  let svg=`<svg viewBox="0 0 ${W} ${H}">`;
+  edges.forEach(([a,b])=>{const A=loc(a),B=loc(b);const cls=(seen(a)&&seen(b))?"medge seen":"medge";svg+=`<line class="${cls}" x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}"/>`;});
+  visN.forEach(l=>{const cur=l.key===S.currentLoc;const sn=seen(l.key);const cls=cur?"cur":(sn?"seen":"fog");const label=sn?l.label:"???";
+    svg+=`<g class="mnode ${cls}"><circle class="ndot" cx="${l.x}" cy="${l.y}" r="${cur?6:5}" stroke-width="1.5"/><text class="nlabel" x="${l.x}" y="${l.y-9}" text-anchor="middle">${esc(label)}</text></g>`;});
+  svg+=`</svg>`;
+  $("mapWrap").innerHTML=svg; $("mapCt").textContent=Object.values(S.registry).filter(e=>e.type==="location"&&e.discovered).length+" mekân";
+}
+function loc(k){return ADVENTURE.locations.find(l=>l.key===k)||{x:0,y:0};}
+function banner(t,sub){const b=document.createElement("div");b.className="winbanner";b.innerHTML=`<h2>${t}</h2><p class="muted">${sub}</p><button class="btn" style="margin-top:10px" id="winNew">Yeni Macera</button>`;$("choices").innerHTML="";$("choices").appendChild(b);$("freeInput").disabled=true;$("freeBtn").disabled=true;$("winNew").onclick=resetGame;}
+
+/* ---------- 9. Zar / Savaş ---------- */
+let curRoll=null;
+function heroBonus(h,skill){const c=CLASSES[h.cls];return skill==="saldiri"?c.atk:(c.skills[skill]||0);}
+function startRoll(rr){
+  curRoll={rr,idx:0};
+  const isAtk=rr.skill==="saldiri"||!!rr.target;
+  $("rollTitle").textContent=isAtk?"Saldırı":(SKILL_LABELS[rr.skill]||rr.skill)+" Denemesi";
+  $("rollDc").innerHTML=isAtk?`Hedef: <span class="tgt">${esc(enemyLabel(rr.target)||"düşman")}</span> · ZS ${rr.dc}`:`Zorluk (DC) ${rr.dc}`;
+  const wrap=$("rollWhoWrap");
+  const elig=S.heroes.filter(h=>!h.downed&&!h.dead); const pool=elig.length?elig:S.heroes;
+  if(pool.length>1){
+    wrap.innerHTML=`<label style="margin:0 0 6px">Kim?</label><select id="rollWho">${pool.map((h,i)=>`<option value="${i}">${esc(h.name)} — ${isAtk?("Saldırı +"+CLASSES[h.cls].atk):(SKILL_LABELS[rr.skill]+" +"+heroBonus(h,rr.skill))}</option>`).join("")}</select>`;
+    wrap.classList.remove("hidden"); $("rollWho").onchange=e=>{curRoll.idx=+e.target.value;updateRollFace(pool);};
+  } else {wrap.innerHTML="";wrap.classList.add("hidden");}
+  curRoll.pool=pool; updateRollFace(pool);
+  $("bigDie").textContent="?";$("bigDie").className="bigdie";$("rollFormula").textContent="";$("rollOutcome").textContent="";$("rollOutcome").className="outcome";$("rollDmg").textContent="";
+  $("rollActions").innerHTML='<button class="btn" id="rollGo">🎲 Zar At</button><button class="btn ghost" id="rollCancel">Vazgeç</button>';
+  $("rollGo").onclick=doRoll; $("rollCancel").onclick=()=>$("rollModal").classList.add("hidden");
+  $("rollModal").classList.remove("hidden");
+}
+function updateRollFace(pool){const h=pool[curRoll.idx]||pool[0];$("rollFace").textContent=h?CLASSES[h.cls].emoji:"🛡️";$("rollName").textContent=h?h.name:"Kahraman";}
+function doRoll(){
+  const rr=curRoll.rr; const pool=curRoll.pool; const hero=pool[curRoll.idx]||pool[0];
+  const isAtk=rr.skill==="saldiri"||!!rr.target; const bonus=heroBonus(hero,isAtk?"saldiri":rr.skill);
+  const who=$("rollWho"); if(who)who.disabled=true; const die=$("bigDie"); die.className="bigdie rolling"; $("rollActions").innerHTML="";
+  let ticks=0; const iv=setInterval(()=>{ die.textContent=1+Math.floor(Math.random()*20);
+    if(++ticks>=14){clearInterval(iv);
+      const d20=1+Math.floor(Math.random()*20); die.textContent=d20; die.className="bigdie settle";
+      const total=d20+bonus;
+      let outcome,cls,label,dmgText="",actionMsg;
+      if(isAtk){
+        const enemy=S.combat.enemies.find(e=>e.key===rr.target&&!e.defeated);
+        const hit=(d20===20)||(d20!==1&&total>=rr.dc);
+        if(hit){
+          let dmg=rollDice(CLASSES[hero.cls].dmg); if(d20===20)dmg+=rollDice(CLASSES[hero.cls].dmg); // kritik: çift hasar zarı
+          outcome="basari";cls="ok";label=d20===20?"KRİTİK İSABET! 🌟":"İSABET!";
+          if(enemy){enemy.cp=Math.max(0,enemy.cp-dmg);if(enemy.cp===0)enemy.defeated=true;
+            dmgText=`${esc(enemy.label)}'e ${dmg} hasar! ${enemy.defeated?"💀 düştü!":"kalan CP "+enemy.cp}`;
+            actionMsg=`${hero.name}, ${enemy.label}'e saldırdı ve İSABET (zar ${d20}+${bonus}=${total} ≥ ZS ${rr.dc}); ${dmg} hasar. ${enemy.label} ${enemy.defeated?"yenildi/düştü":"kalan CP "+enemy.cp}.`;}
+          else{dmgText=`${dmg} hasar`;actionMsg=`${hero.name} saldırdı, isabet, ${dmg} hasar.`;}
+        } else { outcome="basarisiz";cls="bad";label=d20===1?"FECİ KAÇIRMA 😬":"ISKALADI";
+          actionMsg=`${hero.name}, ${enemyLabel(rr.target)||"düşmana"} saldırdı ama ISKALADI (zar ${d20}+${bonus}=${total} < ZS ${rr.dc}).`; }
+        renderCombat();
+      } else {
+        if(d20===20){outcome="basari";cls="ok";label="KRİTİK BAŞARI! 🌟";}
+        else if(d20===1){outcome="basarisiz";cls="bad";label="FECİ BAŞARISIZLIK 😬";}
+        else if(total>=rr.dc){outcome="basari";cls="ok";label="BAŞARILI";}
+        else if(total>=rr.dc-3){outcome="kismi_basari";cls="partial";label="KISMİ";}
+        else {outcome="basarisiz";cls="bad";label="BAŞARISIZ";}
+        actionMsg=`${hero.name}, "${rr.choiceText}" eylemini denedi. ${SKILL_LABELS[rr.skill]} sonucu: ${total} (DC ${rr.dc}) → ${label}.`;
+      }
+      $("rollFormula").innerHTML=`🎲 ${d20} + ${bonus} = <span class="tot">${total}</span> &nbsp;·&nbsp; ${isAtk?"ZS":"DC"} ${rr.dc}`;
+      $("rollOutcome").textContent=label;$("rollOutcome").className="outcome "+cls; $("rollDmg").textContent=dmgText;
+      S.lastRoll={skill:rr.skill,hero:hero.name,d20,bonus,total,dc:rr.dc,outcome,target:rr.target||null};
+      $("rollActions").innerHTML='<button class="btn" id="rollNext">Devam ▸</button>';
+      $("rollNext").onclick=()=>{$("rollModal").classList.add("hidden");takeTurn(actionMsg);};
+    }
+  },65);
+}
+
+/* ---------- 10. Akış ---------- */
+function save(){try{localStorage.setItem(LS_KEY,JSON.stringify(S));}catch(e){}}
+function loadSave(){try{const r=localStorage.getItem(LS_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
+function startGame(){
+  const cfg=readCfg(); $("setupErr").textContent="";
+  if(cfg.aiSource==="api"&&!cfg.apiKey){$("setupErr").textContent="API anahtarı gerekli (ya da Yerel sunucu modu).";return;}
+  const heroes=heroDrafts.filter(d=>d.name.trim()).map(d=>{const c=CLASSES[d.cls];return{name:d.name.trim(),cls:d.cls,cp:c.cp,cpMax:c.cp,downed:false,dead:false};});
+  if(!heroes.length){$("setupErr").textContent="En az bir kahraman adı girin.";return;}
+  try{const prev=JSON.parse(localStorage.getItem(LS_CFG)||"{}");localStorage.setItem(LS_CFG,JSON.stringify(Object.assign(prev,cfg)));}catch(e){}
+  S=freshState(heroes,cfg);S.started=true;
+  $("setup").classList.add("hidden");$("game").classList.remove("hidden");$("btnReset").classList.remove("hidden");
+  renderParty();renderMap();takeTurn("");
+}
+function resumeGame(saved){
+  S=saved;S.cfg=readCfg();
+  $("setup").classList.add("hidden");$("game").classList.remove("hidden");$("btnReset").classList.remove("hidden");
+  renderParty();renderCombat();renderNotes();renderMap();
+  $("narration").textContent="Macera kaldığı yerden sürüyor. Bir sonraki hamleni yap.";
+  $("choices").innerHTML=""; const b=document.createElement("button");b.className="choice";b.innerHTML='<span class="dot">▸</span> Devam et';
+  b.onclick=()=>takeTurn("Maceraya kaldığımız yerden devam ediyoruz. Mevcut sahneyi kısaca hatırlat ve seçenekler sun.");$("choices").appendChild(b);
+}
+function resetGame(){if(!confirm("Mevcut macera silinsin mi?"))return;localStorage.removeItem(LS_KEY);location.reload();}
+
+function init(){
+  loadCfg();
+  $("advIntro").textContent=ADVENTURE.intro;
+  if(heroDrafts.length===0){addHero("");addHero("");}
+  $("aiSource").onchange=updateSourceVis;
+  $("addHero").onclick=()=>addHero("");
+  $("startBtn").onclick=startGame;
+  $("btnReset").onclick=resetGame;
+  $("freeBtn").onclick=()=>{const v=$("freeInput").value.trim();if(v){$("freeInput").value="";takeTurn(v);}};
+  $("freeInput").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();$("freeBtn").click();}});
+  const saved=loadSave();
+  if(saved&&saved.started&&saved.heroes&&saved.heroes.length){
+    const c=document.createElement("div");c.className="card";
+    c.innerHTML=`<h2 style="color:var(--gold)">Kayıtlı macera bulundu</h2><p class="muted">${saved.heroes.map(h=>esc(h.name)).join(", ")} ile yarım kalmış bir macera var.</p>
+      <div class="row" style="margin-top:10px"><button class="btn" id="resumeBtn">▸ Devam Et</button><button class="btn ghost" id="discardBtn">Sil, baştan</button></div>`;
+    $("setup").prepend(c);
+    $("resumeBtn").onclick=()=>{const cfg=readCfg();if(cfg.aiSource==="api"&&!cfg.apiKey){toast("Önce API anahtarını gir.");return;}resumeGame(saved);};
+    $("discardBtn").onclick=()=>{localStorage.removeItem(LS_KEY);c.remove();};
+  }
+}
+init();
+</script>
+</body>
+</html>
