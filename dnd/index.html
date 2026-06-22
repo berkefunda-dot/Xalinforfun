@@ -1,0 +1,793 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#1a1410" />
+<title>Sisli Fener Konağı — Aile Dedektif Oyunu</title>
+<style>
+  :root{
+    --bg:#140f0c; --bg2:#1d1611; --panel:#241b14; --panel2:#2c2017;
+    --ink:#f1e3cc; --ink-dim:#c9b79a; --muted:#9c8a72;
+    --gold:#e0a64b; --gold-dim:#b9863a; --ember:#d9743f; --line:#3a2c1f;
+    --ok:#7bbf6a; --warn:#d9a441; --bad:#cf6b5a; --blue:#6fa8c7;
+    --serif:"Georgia","Times New Roman",serif;
+    --sans:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{
+    font-family:var(--sans); color:var(--ink);
+    background:
+      radial-gradient(1200px 700px at 70% -10%, #3a2a16 0%, transparent 60%),
+      radial-gradient(900px 600px at 10% 110%, #241a2a 0%, transparent 55%),
+      linear-gradient(160deg,#140f0c 0%, #0e0a08 100%);
+    background-attachment:fixed;
+    line-height:1.55;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:18px 16px 60px}
+  h1,h2,h3{font-family:var(--serif);font-weight:700;letter-spacing:.3px}
+  .topbar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .topbar .title{font-family:var(--serif);font-size:clamp(20px,4.5vw,30px);
+    color:var(--gold);text-shadow:0 2px 10px rgba(224,166,75,.25)}
+  .topbar .sub{color:var(--muted);font-size:13px;font-style:italic}
+  .spacer{flex:1}
+  .iconbtn{background:var(--panel);border:1px solid var(--line);color:var(--ink-dim);
+    border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+  .iconbtn:hover{border-color:var(--gold-dim);color:var(--ink)}
+  .iconbtn:active{transform:translateY(1px)}
+
+  .card{background:linear-gradient(180deg,var(--panel) 0%,var(--bg2) 100%);
+    border:1px solid var(--line);border-radius:16px;padding:18px;
+    box-shadow:0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03)}
+  .card+.card{margin-top:14px}
+  label{display:block;font-size:13px;color:var(--ink-dim);margin:10px 0 5px}
+  input,select,textarea{width:100%;background:#15100c;border:1px solid var(--line);
+    color:var(--ink);border-radius:10px;padding:11px 12px;font-size:15px;font-family:var(--sans)}
+  input:focus,select,textarea:focus{outline:none;border-color:var(--gold-dim)}
+  textarea{resize:vertical;min-height:54px}
+  .btn{background:linear-gradient(180deg,var(--gold) 0%,var(--gold-dim) 100%);
+    color:#231708;border:none;border-radius:12px;padding:13px 22px;font-size:16px;font-weight:700;
+    cursor:pointer;box-shadow:0 5px 0 #7d5a23, 0 8px 18px rgba(0,0,0,.4)}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #7d5a23}
+  .btn.ghost{background:var(--panel2);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+  .btn.ghost:active{transform:translateY(1px)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;box-shadow:none;transform:none}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  .row>*{flex:1;min-width:120px}
+  .muted{color:var(--muted);font-size:13px}
+  .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px;font-size:12px;color:var(--ink-dim);margin:2px}
+  .hidden{display:none!important}
+  a{color:var(--gold)}
+
+  /* setup detectives */
+  .det{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;background:#1b140f}
+  .det .archs{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .arch{flex:1;min-width:130px;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer;background:#15100c}
+  .arch.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+  .arch b{display:block;color:var(--gold);font-size:14px}
+  .arch small{color:var(--muted);font-size:11px}
+  .rmdet{background:none;border:none;color:var(--bad);cursor:pointer;font-size:13px}
+
+  /* game */
+  .scene{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);
+    margin-bottom:14px;min-height:170px;display:flex;align-items:flex-end}
+  .scene .art{position:absolute;inset:0;background-size:cover;background-position:center;
+    filter:saturate(.92) contrast(1.02)}
+  .scene .grain{position:absolute;inset:0;opacity:.10;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+  .scene .fog{position:absolute;inset:0;background:
+     radial-gradient(120% 90% at 50% 120%, rgba(20,15,12,.92) 0%, transparent 60%),
+     linear-gradient(0deg, rgba(15,11,9,.85) 0%, transparent 55%)}
+  .scene .cap{position:relative;padding:12px 14px;width:100%;display:flex;align-items:center;gap:10px}
+  .scene .cap .loc{font-family:var(--serif);color:var(--gold);font-size:15px;text-shadow:0 2px 6px #000}
+  .scene .cap .shot{margin-left:auto;font-size:11px;color:var(--ink-dim);
+    background:rgba(0,0,0,.35);border-radius:999px;padding:2px 9px}
+
+  .narration{font-family:var(--serif);font-size:clamp(16px,3.4vw,18px);color:var(--ink);
+    white-space:pre-wrap}
+  .speaker{display:inline-block;font-size:12px;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--ember);margin-bottom:6px}
+  .choices{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+  .choice{text-align:left;background:var(--panel2);border:1px solid var(--line);color:var(--ink);
+    border-radius:11px;padding:12px 14px;font-size:15px;cursor:pointer;display:flex;gap:10px;align-items:center}
+  .choice:hover{border-color:var(--gold-dim);background:#322417}
+  .choice:active{transform:translateY(1px)}
+  .choice .dot{flex:none;width:22px;height:22px;border-radius:50%;background:#15100c;border:1px solid var(--gold-dim);
+    color:var(--gold);font-size:12px;display:flex;align-items:center;justify-content:center}
+  .choice .dice{margin-left:auto;font-size:12px;color:var(--blue)}
+
+  .freeact{margin-top:12px;display:flex;gap:8px}
+  .freeact input{flex:1}
+  .freeact .btn{flex:none;padding:11px 16px;font-size:15px}
+
+  /* dice */
+  .rollbox{margin-top:12px;border:1px dashed var(--gold-dim);border-radius:12px;padding:14px;background:#1b140f}
+  .rollbox .hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .die{font-size:34px;font-weight:800;font-family:var(--serif);color:var(--gold);
+    min-width:54px;text-align:center;background:#15100c;border:1px solid var(--line);border-radius:12px;padding:6px 10px}
+  .die.spin{animation:wob .5s ease}
+  @keyframes wob{0%{transform:rotate(-10deg) scale(.9)}50%{transform:rotate(8deg) scale(1.1)}100%{transform:none}}
+  .res{font-weight:700}
+  .res.ok{color:var(--ok)} .res.partial{color:var(--warn)} .res.bad{color:var(--bad)}
+
+  /* sidebars */
+  .grid2{display:grid;grid-template-columns:1fr;gap:14px}
+  details.acc{border:1px solid var(--line);border-radius:12px;background:var(--panel);overflow:hidden}
+  details.acc>summary{cursor:pointer;padding:11px 14px;font-family:var(--serif);color:var(--gold);
+    list-style:none;display:flex;align-items:center;gap:8px}
+  details.acc>summary::-webkit-details-marker{display:none}
+  details.acc>summary .ct{margin-left:auto;font-size:12px;color:var(--muted);font-family:var(--sans)}
+  details.acc .body{padding:0 14px 12px}
+  .ent{font-size:13px;padding:6px 0;border-top:1px solid var(--line);display:flex;gap:8px;align-items:baseline}
+  .ent:first-child{border-top:none}
+  .ent .k{color:var(--muted);font-size:11px}
+  .ent .t{font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid var(--line);color:var(--ink-dim)}
+  .note{font-size:13px;padding:6px 0;border-top:1px solid var(--line);color:var(--ink-dim)}
+  .note:first-child{border-top:none}
+
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);
+    background:#2c2017;border:1px solid var(--gold-dim);color:var(--ink);padding:11px 18px;border-radius:12px;
+    box-shadow:0 8px 24px rgba(0,0,0,.5);font-size:14px;z-index:50;max-width:90vw;text-align:center}
+  .typing{display:inline-flex;gap:4px;align-items:center;color:var(--muted)}
+  .typing i{width:6px;height:6px;border-radius:50%;background:var(--gold-dim);animation:bl 1s infinite}
+  .typing i:nth-child(2){animation-delay:.2s} .typing i:nth-child(3){animation-delay:.4s}
+  @keyframes bl{0%,100%{opacity:.3}50%{opacity:1}}
+  .err{color:var(--bad);font-size:13px;margin-top:8px}
+  .winbanner{border:1px solid var(--gold);background:linear-gradient(180deg,#3a2a14,#241a10);
+    border-radius:14px;padding:16px;text-align:center;margin-top:14px}
+  .winbanner h2{color:var(--gold);font-size:22px}
+  @media(min-width:720px){ .grid2{grid-template-columns:1fr 1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div>
+      <div class="title">🔍 Sisli Fener Konağı</div>
+      <div class="sub">Aile dedektif gizemi · şiddetsiz · 11+ yaş</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="btnSettings">⚙︎ Ayarlar</button>
+    <button class="iconbtn hidden" id="btnReset">↺ Yeni Oyun</button>
+  </div>
+
+  <!-- ===================== SETUP ===================== -->
+  <div id="setup">
+    <div class="card">
+      <h2 style="color:var(--gold)">Davete Hoş Geldiniz</h2>
+      <p class="muted" style="margin-top:6px">
+        Fırtınalı bir gecede, kıyıdaki konakta verilen davette ailenin yadigârı
+        <b>"Deniz Yıldızı" safiri</b> vitrinden kayboldu. Fırtına telefon hatlarını kesti;
+        kimse sabaha kadar ayrılamıyor. Siz dedektifsiniz — safiri şafaktan önce bulun.
+      </p>
+
+      <label>Anthropic API anahtarı <span class="muted">(tarayıcında saklanır, kimseyle paylaşılmaz)</span></label>
+      <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off" />
+      <div class="row" style="margin-top:8px">
+        <div>
+          <label>Anlatıcı modeli</label>
+          <select id="model">
+            <option value="claude-sonnet-4-6">Sonnet 4.6 — dengeli (önerilen)</option>
+            <option value="claude-haiku-4-5-20251001">Haiku 4.5 — hızlı & ucuz</option>
+            <option value="claude-opus-4-8">Opus 4.8 — en yetenekli</option>
+          </select>
+        </div>
+        <div>
+          <label>Görsel sahne kartı</label>
+          <select id="artMode">
+            <option value="on">Açık — atmosferik kart</option>
+            <option value="off">Kapalı — sade metin</option>
+          </select>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:6px">
+        Anahtarın yoksa <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>'dan alınır.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2 style="color:var(--gold)">Dedektifler</h2>
+      <p class="muted">Her oyuncu bir dedektif oluştursun. İsim verin ve bir uzmanlık seçin (1–4 kişi).</p>
+      <div id="dets"></div>
+      <button class="btn ghost" id="addDet" style="margin-top:12px">+ Dedektif ekle</button>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <button class="btn" id="startBtn">🕯️ Davete Gir</button>
+      <div class="err" id="setupErr"></div>
+    </div>
+  </div>
+
+  <!-- ===================== GAME ===================== -->
+  <div id="game" class="hidden">
+    <div class="scene" id="scene">
+      <div class="art" id="sceneArt"></div>
+      <div class="grain"></div>
+      <div class="fog"></div>
+      <div class="cap"><span class="loc" id="sceneLoc">Giriş Holü</span><span class="shot" id="sceneShot">wide</span></div>
+    </div>
+
+    <div class="card">
+      <div class="speaker" id="speaker">DM</div>
+      <div class="narration" id="narration"></div>
+      <div id="rollHost"></div>
+      <div class="choices" id="choices"></div>
+      <div class="freeact">
+        <input id="freeInput" placeholder="Kendi eylemini yaz… (ör. 'Vitrini yakından incele')" />
+        <button class="btn" id="freeBtn">Yap</button>
+      </div>
+      <div class="err" id="gameErr"></div>
+    </div>
+
+    <div class="grid2" style="margin-top:14px">
+      <details class="acc" open>
+        <summary>🕵 Dedektifler & Eşyalar<span class="ct" id="invCt"></span></summary>
+        <div class="body" id="party"></div>
+      </details>
+      <details class="acc">
+        <summary>📓 Defter — İpuçları & Notlar<span class="ct" id="noteCt"></span></summary>
+        <div class="body" id="notes"><div class="muted">Henüz not yok.</div></div>
+      </details>
+    </div>
+    <details class="acc" style="margin-top:14px">
+      <summary>🗺 Keşfedilen Mekânlar & Kişiler<span class="ct" id="entCt"></span></summary>
+      <div class="body" id="entities"></div>
+    </details>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script>
+/* =================================================================
+   SİSLİ FENER KONAĞI — istemci-taraflı dedektif oyunu
+   DM mantığı seed_pilot_case.md + dm_system_prompt.md'ye dayanır.
+   ================================================================= */
+
+/* ---------- 1. VAKA VERİSİ (seed_pilot_case.md) ---------- */
+
+const STYLE_ANCHOR =
+  "painterly semi-realistic, visible brushwork, warm lantern light, stormy coastal mood, light fog and grain";
+
+// Açık seed — oyunculara görünür, registry'ye girer
+const SEED_LOCATIONS = [
+  {key:"giris_holu",   label:"Giriş Holü",      note:"yüksek tavan, ıslak paltolar, titreşen avize"},
+  {key:"yemek_salonu", label:"Yemek Salonu",    note:"safirin kaybolduğu yer; boş vitrin, dağılmış sofra"},
+  {key:"kutuphane",    label:"Kütüphane",       note:"şömine, tozlu kitaplar, deri koltuklar"},
+  {key:"fener_kulesi", label:"Fener Kulesi",    note:"dönen ışık, demir merdiven, fırtına manzarası"},
+  {key:"bahce_ve_iskele",label:"Bahçe ve İskele",note:"yağmurda çamurlu patika, bağlı bir kayık"},
+  {key:"hizmet_koridoru",label:"Hizmet Koridoru",note:"dar geçit, anahtarlık, kiler kapısı"},
+];
+const SEED_NPCS = [
+  {key:"ev_sahibesi_leyla",label:"Leyla Hanım",        note:"konağın sahibesi; safir ailesinin yadigârı, çok üzgün"},
+  {key:"eksper_kemal",     label:"Sanat Eksperi Kemal",note:"safiri \"değerlemek için\" davet edilmiş; kibar, ölçülü"},
+  {key:"kaptan_riza",      label:"Kaptan Rıza",        note:"eski bir deniz kaptanı, davetli; sert ama dürüst görünüyor"},
+  {key:"hizmetci_nare",    label:"Hizmetçi Nare",      note:"sofrayı o kurdu; gergin, az konuşuyor"},
+  {key:"yegen_can",        label:"Yeğen Can",          note:"Leyla Hanım'ın yeğeni; borçlu olduğu söyleniyor, huzursuz"},
+];
+const SEED_ITEMS = [
+  {key:"vitrin_safir",   label:"Vitrindeki Safir", note:"yemek salonu; dikkatli bakışta \"fazla kusursuz\" görünür"},
+  {key:"islak_semsiye",  label:"Islak Şemsiye",    note:"giriş holü; kime ait olduğu sorgulanabilir"},
+  {key:"camurlu_ayak_izi",label:"Çamurlu Ayak İzi",note:"bahçe/iskele ile hol arası"},
+  {key:"yirtik_eldiven", label:"Yırtık Eldiven",   note:"hizmet koridoru"},
+  {key:"cam_kesici",     label:"İnce Cam Kesici",  note:"gizlilik/ikna ile bir şüphelinin yanında bulunur"},
+  {key:"borc_mektubu",   label:"Borç Mektubu",     note:"kütüphanede bir kitabın arasında"},
+];
+
+// === GİZLİ VAKA DOSYASI (CASE_BIBLE_PRIVATE) — ASLA arayüzde gösterilmez ===
+const CASE_BIBLE_PRIVATE = `
+FAIL: eksper_kemal (Sanat Eksperi Kemal).
+
+YÖNTEM: Kemal davet sırasında vitrindeki gerçek safiri ustalıkla sahte bir cam taşla
+değiştirdi; gerçeğini iç cebinde sakladı. Fırtınanın hatları keseceğini ve kimsenin
+ayrılamayacağını biliyordu; planı sabah "daha iyi incelemek üzere" taşı konaktan çıkarmaktı.
+Vitrin camını açmak için ince bir cam kesici kullandı.
+
+SEBEP: Kemal'in ödenmemiş borçları var (borc_mektubu aslında ONA ait, ama kütüphanede
+sanki başkasınınmış gibi bırakılmış). Safiri bir koleksiyoncuya satmak üzere anlaşmıştı.
+
+ADİL İPUCU ZİNCİRİ (oyuncular birleştirmeli):
+1. vitrin_safir aslında SAHTE — gozlem veya bilgi başarılı olursa taşın fazla kusursuz,
+   çizik/iç kusur barındırmadığı fark edilir (gerçek safirde olur).
+2. cam_kesici Kemal'in çantasında/yanında bulunur (gizlilik ile gizlice veya ikna ile açıkça).
+   Bir sanat ekspertizinde böyle bir alete gerek yoktur.
+3. ZAMAN TUTARSIZLIĞI: Kemal fırtına başlamadan ÖNCE geldiğini söyler; ama islak_semsiye ve
+   hole kadar uzanan camurlu_ayak_izi onun fırtına BAŞLADIKTAN SONRA geldiğini gösterir (cikarim).
+   Yani anlattığı zaman çizelgesi yalan.
+
+ŞAŞIRTMACALAR (red herrings):
+- yegen_can borçlu ve huzursuz → en bariz şüpheli gibi durur ama MASUMDUR (borcunu başka yoldan
+  kapatmış; o gece sadece Leyla Hanım'a itiraf etmeye çekiniyordu).
+- hizmetci_nare'nin yirtik_eldiven'i → suça değil, akşam kırılan bir bardağı toplarken yırtılmıştır.
+  Nare gergindir çünkü kırığı sakladı, safiri değil.
+
+ÇÖZÜM KOŞULU: Oyuncular (1) sahte safir + (2) cam kesici + (3) zaman tutarsızlığından en az İKİSİNİ
+birleştirip eksper_kemal'i BORÇ sebebiyle suçlarsa vaka çözülür. Tek bir ipucu ya da yalnızca
+şaşırtmacalara dayanan suçlama yetersizdir; "henüz kanıtınız zayıf" deyip araştırmayı sürdür.
+Vaka çözüldüğünde state_changes.flags_set içine {"case_solved": true} ekle ve finali oyna.
+`.trim();
+
+/* ---------- 2. DM SİSTEM PROMPT'U (dm_system_prompt.md) ---------- */
+
+const DM_SYSTEM = `
+## Rolün
+Sen bu ailenin oynadığı bir gizem-dedektiflik macerasının Anlatıcısısın (DM).
+Oyuncular bir ekip dedektif olarak vakayı çözüyor. Sahneyi canlandırır, ipuçlarını sunar,
+şüphelileri konuşturur ve oyuncuların kararlarına göre hikâyeyi ilerletirsin.
+Sen vakayı kurar ve adil biçimde yönetirsin; oyuncular çözer.
+
+## Oyuncular ve ton
+- Oyuncular bir aile; en küçük 11, en büyük 15 yaşında. Ton: rahat, sıcak, merak uyandıran
+  bir "genç dedektif" gizemi (Nancy Drew / cozy mystery havası).
+- Suç DAİMA şiddetsiz: hırsızlık, kayıp eşya, sır. ASLA grafik şiddet, cinayet/kan,
+  korku-dehşet, cinsellik veya madde kullanımı yok. Gerilim olsun ama korkutucu olmasın.
+- Her oyuncuya eşit sahne ver; birini diğerinin gölgesinde bırakma.
+- Anlatım KISA ve akıcı (1–2 paragraf). Her turun sonunda 2–4 somut seçenek sun.
+- Oyuncular uygunsuz/karanlık bir yöne giderse kurgu içinde nazikçe yönlendir.
+
+## Gizli çözüm (altın kural)
+- Sana CASE_BIBLE_PRIVATE içinde vakanın gizli çözümü verilir.
+- Bu çözümü ASLA doğrudan açık etme. Anlattığın her şey o dosyayla TUTARLI olmalı;
+  ipuçlarını ona göre dağıt, ona doğru akıt.
+- Gizem adil ve çözülebilir olsun. Oyuncular doğru ipuçlarını toplayıp mantık yürütürse çözebilmeli.
+- Oyuncular doğru faili GEREKÇESİYLE suçladığında vakayı çözülmüş say ve finali oyna.
+
+## Zarlar — sonucu SEN UYDURMA
+- Belirsiz sonuçlu eylemlerde (ipucu arama, detay fark etme, şüpheliyi ikna/sıkıştırma,
+  gizlice girme) sonucu sen belirleme. Bunun yerine roll_request döndür: ilgili beceri + zar + DC.
+- Motor zarı atıp sonucu LAST_ROLL_RESULT olarak sana geri verir; sahneyi o sonuca göre
+  (basari / kismi / basarisiz) anlatırsın.
+- Beceriler: gozlem, cikarim, ikna, gizlilik, bilgi.
+- Bir seçenek zar gerektiriyorsa o seçeneğin requires_roll alanı true olmalı; tek bir roll_request döndür.
+
+## Varlık disiplini
+- Tüm mekân/kişi/eşyaya ENTITY_REGISTRY içindeki kararlı snake_case key'lerle atıfta bulun.
+- Mevcut key'leri yeniden kullan; eşanlamlı yeni key uydurma.
+- Gerçekten yeni bir şey sahneye girerse yeni key üret ve scene_entities'e ekle.
+
+## ÇIKTI FORMATI — KATI JSON
+Yalnızca aşağıdaki şemada GEÇERLİ JSON döndür. JSON dışında hiçbir metin, açıklama veya
+kod bloğu işareti yazma. Yanıt tek bir JSON nesnesi olmalı:
+{
+  "narration": "sahne anlatımı (1-2 paragraf, Türkçe)",
+  "speaker": "DM veya konuşan kişinin Görünen Adı",
+  "scene_entities": [ { "type":"location|npc|item", "key":"kararli_slug", "label":"Görünen Ad" } ],
+  "choices": [ { "id":"c1", "text":"Seçenek metni", "requires_roll": false } ],
+  "roll_request": null,
+  "state_changes": { "flags_set": {}, "inventory_add": [], "notes_add": [] },
+  "image": { "primary_entity_key": "mekan_veya_kisi_key", "shot": "wide|portrait|detail" }
+}
+- roll_request örneği: { "skill":"gozlem", "dice":"d20", "dc":13, "for_choice":"c2" }
+- state_changes yalnızca öneridir; backend işler.
+- notes_add: oyuncuların defterine yazılacak somut ipucu/keşif cümleleri (kısa, Türkçe).
+- inventory_add: ele geçen eşyaların Görünen Adları.
+- image.primary_entity_key o sahnede gösterilecek görselin ait olduğu varlık.
+`.trim();
+
+/* ---------- 3. DURUM ---------- */
+
+const ARCHETYPES = {
+  keskingoz: {label:"Keskin Göz", desc:"gözlem & çıkarım", skills:{gozlem:3,cikarim:2,ikna:0,gizlilik:1,bilgi:1}},
+  tatlidil:  {label:"Tatlı Dilli", desc:"ikna & bilgi",   skills:{gozlem:1,cikarim:1,ikna:3,gizlilik:0,bilgi:2}},
+  sessizayak:{label:"Sessiz Ayak", desc:"gizlilik & gözlem",skills:{gozlem:2,cikarim:0,ikna:1,gizlilik:3,bilgi:1}},
+  bilgin:    {label:"Kitap Kurdu", desc:"bilgi & çıkarım", skills:{gozlem:1,cikarim:2,ikna:1,gizlilik:0,bilgi:3}},
+};
+const SKILL_LABELS = {gozlem:"Gözlem",cikarim:"Çıkarım",ikna:"İkna",gizlilik:"Gizlilik",bilgi:"Bilgi"};
+
+let S = null; // oyun durumu
+const LS_KEY = "sfk_save_v1";
+const LS_CFG = "sfk_cfg_v1";
+
+function freshState(detectives, cfg){
+  const registry = {};
+  [["location",SEED_LOCATIONS],["npc",SEED_NPCS],["item",SEED_ITEMS]].forEach(([type,arr])=>{
+    arr.forEach(e=> registry[e.key] = {type, key:e.key, label:e.label, note:e.note, discovered:false});
+  });
+  return {
+    cfg,
+    detectives,
+    registry,
+    inventory:[],
+    notes:[],
+    flags:{},
+    summaryNotes:[],
+    recentTurns:[],   // {action, narration}
+    lastRoll:null,
+    pending:null,     // bekleyen DM yanıtı (render edilmiş)
+    pendingRoll:null, // {skill,dice,dc,for_choice, choiceText}
+    solved:false,
+    started:false,
+  };
+}
+
+/* ---------- 4. DOM yardımcıları ---------- */
+const $ = id => document.getElementById(id);
+function toast(msg, ms=2600){ const t=$("toast"); t.textContent=msg; t.classList.remove("hidden");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.add("hidden"), ms); }
+function esc(s){ return (s||"").replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+/* ---------- 5. SETUP ekranı ---------- */
+let detDrafts = [];
+function addDetDraft(name=""){
+  if(detDrafts.length>=4){ toast("En fazla 4 dedektif."); return; }
+  detDrafts.push({name, arch:"keskingoz"});
+  renderDets();
+}
+function renderDets(){
+  const host=$("dets"); host.innerHTML="";
+  detDrafts.forEach((d,i)=>{
+    const el=document.createElement("div"); el.className="det";
+    el.innerHTML=`
+      <div style="display:flex;gap:8px;align-items:center">
+        <input data-i="${i}" class="dname" placeholder="Dedektif adı" value="${esc(d.name)}" style="flex:1"/>
+        ${detDrafts.length>1?`<button class="rmdet" data-rm="${i}">kaldır</button>`:""}
+      </div>
+      <div class="archs">
+        ${Object.entries(ARCHETYPES).map(([k,a])=>`
+          <div class="arch ${d.arch===k?"on":""}" data-arch="${i}:${k}">
+            <b>${a.label}</b><small>${a.desc}</small>
+          </div>`).join("")}
+      </div>`;
+    host.appendChild(el);
+  });
+  host.querySelectorAll(".dname").forEach(inp=> inp.oninput=e=>{ detDrafts[+e.target.dataset.i].name=e.target.value; });
+  host.querySelectorAll("[data-rm]").forEach(b=> b.onclick=e=>{ detDrafts.splice(+e.target.dataset.rm,1); renderDets(); });
+  host.querySelectorAll("[data-arch]").forEach(b=> b.onclick=e=>{
+    const [i,k]=e.currentTarget.dataset.arch.split(":"); detDrafts[+i].arch=k; renderDets(); });
+}
+
+function loadCfg(){
+  try{ const c=JSON.parse(localStorage.getItem(LS_CFG)||"{}");
+    if(c.apiKey) $("apiKey").value=c.apiKey;
+    if(c.model) $("model").value=c.model;
+    if(c.artMode) $("artMode").value=c.artMode;
+  }catch(e){}
+}
+function readCfg(){
+  return { apiKey:$("apiKey").value.trim(), model:$("model").value, artMode:$("artMode").value };
+}
+
+/* ---------- 6. Claude API çağrısı ---------- */
+function buildContextBlock(playerAction){
+  const sheets = S.detectives.map(d=>({
+    ad:d.name, uzmanlik:ARCHETYPES[d.arch].label, beceriler:ARCHETYPES[d.arch].skills
+  }));
+  const registry = Object.values(S.registry).map(e=>({type:e.type,key:e.key,label:e.label}));
+  const recent = S.recentTurns.slice(-6).map(t=>`Oyuncu: ${t.action}\nDM: ${t.narration}`).join("\n---\n");
+  return [
+    "## CHARACTER_SHEETS", JSON.stringify(sheets, null, 0),
+    "\n## ENTITY_REGISTRY", JSON.stringify(registry, null, 0),
+    "\n## STORY_SUMMARY", (S.summaryNotes.length? S.summaryNotes.map(n=>"- "+n).join("\n") : "(oyun yeni başladı)"),
+    "\n## CASE_BIBLE_PRIVATE (GİZLİ — asla açık etme)", CASE_BIBLE_PRIVATE,
+    "\n## RECENT_TURNS", recent || "(yok)",
+    "\n## LAST_ROLL_RESULT", S.lastRoll? JSON.stringify(S.lastRoll) : "null",
+    "\n## PLAYER_ACTION", playerAction,
+  ].join("\n");
+}
+
+async function callDM(playerAction){
+  const sys = DM_SYSTEM + "\n\n# ----- BU TURUN BAĞLAMI -----\n" + buildContextBlock(playerAction);
+  const body = {
+    model: S.cfg.model,
+    max_tokens: 1100,
+    system: sys,
+    messages: [
+      { role:"user", content: playerAction || "Oyunu başlat ve açılış sahnesini anlat." },
+      { role:"assistant", content: "{" } // JSON'a zorla
+    ],
+  };
+  const res = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{
+      "content-type":"application/json",
+      "x-api-key":S.cfg.apiKey,
+      "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true",
+    },
+    body: JSON.stringify(body),
+  });
+  if(!res.ok){
+    let detail=""; try{ const j=await res.json(); detail=j.error?.message||JSON.stringify(j); }catch(e){ detail=await res.text(); }
+    throw new Error(`API ${res.status}: ${detail}`);
+  }
+  const data = await res.json();
+  let text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+  text = "{" + text; // prefill'i geri ekle
+  return parseDMJson(text);
+}
+
+function parseDMJson(text){
+  let t = text.trim();
+  // olası kod bloğu işaretlerini temizle
+  t = t.replace(/^```(json)?/i,"").replace(/```$/,"").trim();
+  // ilk { ... son } arasını al
+  const a=t.indexOf("{"), b=t.lastIndexOf("}");
+  if(a>=0 && b>a) t=t.slice(a,b+1);
+  return JSON.parse(t);
+}
+
+/* ---------- 7. Tur işleme ---------- */
+function setBusy(on){
+  $("freeBtn").disabled=on; $("freeInput").disabled=on;
+  document.querySelectorAll(".choice").forEach(c=>c.disabled=on);
+}
+function showTyping(){
+  $("narration").innerHTML='<span class="typing">Anlatıcı düşünüyor <i></i><i></i><i></i></span>';
+  $("choices").innerHTML=""; $("rollHost").innerHTML=""; $("speaker").textContent="DM";
+}
+
+async function takeTurn(playerAction){
+  $("gameErr").textContent="";
+  setBusy(true); showTyping();
+  try{
+    const dm = await callDM(playerAction);
+    if(playerAction) S.recentTurns.push({action:playerAction, narration:(dm.narration||"").slice(0,400)});
+    applyDM(dm);
+    renderDM(dm);
+    save();
+  }catch(err){
+    $("narration").innerHTML='<span class="muted">Anlatıcı sustu…</span>';
+    $("gameErr").textContent = "Hata: " + err.message;
+    // tekrar deneme seçeneği
+    $("choices").innerHTML="";
+    const b=document.createElement("button"); b.className="choice";
+    b.innerHTML='<span class="dot">↺</span> Tekrar dene';
+    b.onclick=()=>takeTurn(playerAction);
+    $("choices").appendChild(b);
+  }finally{
+    setBusy(false);
+  }
+}
+
+function applyDM(dm){
+  // entity registry birleştir
+  (dm.scene_entities||[]).forEach(e=>{
+    if(!e || !e.key) return;
+    if(!S.registry[e.key]) S.registry[e.key]={type:e.type||"item",key:e.key,label:e.label||e.key,note:"",discovered:true};
+    else S.registry[e.key].discovered=true;
+    if(e.label) S.registry[e.key].label=e.label;
+  });
+  // primary entity de keşfedilmiş say
+  const pk=dm.image && dm.image.primary_entity_key;
+  if(pk && S.registry[pk]) S.registry[pk].discovered=true;
+
+  const sc=dm.state_changes||{};
+  (sc.inventory_add||[]).forEach(it=>{ if(it && !S.inventory.includes(it)) S.inventory.push(it); });
+  (sc.notes_add||[]).forEach(n=>{ if(n && !S.notes.includes(n)){ S.notes.push(n); S.summaryNotes.push(n); } });
+  if(sc.flags_set && typeof sc.flags_set==="object") Object.assign(S.flags, sc.flags_set);
+  if(S.flags.case_solved===true || S.flags.case_solved==="true") S.solved=true;
+
+  // summary çok büyürse kırp
+  if(S.summaryNotes.length>40) S.summaryNotes=S.summaryNotes.slice(-40);
+  if(S.recentTurns.length>12) S.recentTurns=S.recentTurns.slice(-12);
+
+  S.lastRoll=null; // tüketildi
+}
+
+/* ---------- 8. Render ---------- */
+function renderDM(dm){
+  $("speaker").textContent = dm.speaker || "DM";
+  $("narration").textContent = dm.narration || "(boş sahne)";
+
+  // sahne kartı
+  renderScene(dm.image);
+
+  // roll bekleyen seçenekler / roll_request
+  $("rollHost").innerHTML="";
+  const rr = dm.roll_request;
+  const choices = (dm.choices||[]).filter(c=>c && c.text);
+
+  $("choices").innerHTML="";
+  choices.forEach((c,i)=>{
+    const b=document.createElement("button"); b.className="choice";
+    const needsRoll = c.requires_roll || (rr && rr.for_choice===c.id);
+    b.innerHTML=`<span class="dot">${i+1}</span><span>${esc(c.text)}</span>`
+      + (needsRoll && rr ? `<span class="dice">🎲 ${SKILL_LABELS[rr.skill]||rr.skill} · DC ${rr.dc}</span>`
+         : needsRoll ? `<span class="dice">🎲 zar</span>` : ``);
+    b.onclick=()=>{
+      if(needsRoll && rr){ startRoll({...rr, choiceText:c.text}); }
+      else { takeTurn(c.text); }
+    };
+    $("choices").appendChild(b);
+  });
+
+  // hiç seçenek yoksa ve roll_request varsa direkt zar kutusu göster
+  if(choices.length===0 && rr){ startRoll({...rr, choiceText:"(eylemi dene)"}); }
+
+  if(S.solved) showWinBanner(dm);
+  renderSidebars();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function renderScene(image){
+  if(!image || S.cfg.artMode!=="on"){ $("scene").classList.add("hidden"); return; }
+  $("scene").classList.remove("hidden");
+  const ent = image.primary_entity_key && S.registry[image.primary_entity_key];
+  $("sceneLoc").textContent = ent ? ent.label : "Sisli Fener Konağı";
+  $("sceneShot").textContent = image.shot || "wide";
+  // gerçek görsel üretimi yok — varlık key'inden deterministik atmosferik degrade
+  $("sceneArt").style.background = gradientFor(image.primary_entity_key||"giris_holu");
+  $("sceneArt").title = STYLE_ANCHOR;
+}
+function gradientFor(key){
+  let h=0; for(const ch of key) h=(h*31+ch.charCodeAt(0))>>>0;
+  const a=h%360, b=(a+40)%360;
+  return `radial-gradient(120% 120% at 30% 20%, hsl(${a} 45% 28%) 0%, hsl(${b} 40% 14%) 55%, #0e0a08 100%)`;
+}
+
+/* ---------- 9. Zar ---------- */
+function bonusFor(det, skill){ return (ARCHETYPES[det.arch].skills[skill]||0); }
+function startRoll(rr){
+  S.pendingRoll=rr;
+  const host=$("rollHost"); host.innerHTML="";
+  const box=document.createElement("div"); box.className="rollbox";
+  const who = S.detectives.length>1
+    ? `<label style="margin:0 0 6px">Kim deneyecek?</label>
+       <select id="rollWho">${S.detectives.map((d,i)=>`<option value="${i}">${esc(d.name)} (${SKILL_LABELS[rr.skill]} +${bonusFor(d,rr.skill)})</option>`).join("")}</select>`
+    : "";
+  box.innerHTML=`
+    <div class="muted" style="margin-bottom:8px">🎲 <b>${SKILL_LABELS[rr.skill]||rr.skill}</b> denemesi — Zorluk (DC) <b>${rr.dc}</b></div>
+    ${who}
+    <div class="hd" style="margin-top:10px">
+      <div class="die" id="dieFace">?</div>
+      <button class="btn" id="doRoll">Zar At</button>
+      <div id="rollOut" class="muted"></div>
+    </div>`;
+  host.appendChild(box);
+  $("choices").innerHTML=""; // zar sırasında seçenekleri gizle
+  $("doRoll").onclick=()=>doRoll(rr);
+}
+function doRoll(rr){
+  const whoSel=$("rollWho"); const idx= whoSel? +whoSel.value : 0;
+  const det=S.detectives[idx]; const bonus=bonusFor(det,rr.skill);
+  const die=$("dieFace"); $("doRoll").disabled=true; if(whoSel) whoSel.disabled=true;
+  let ticks=0;
+  const iv=setInterval(()=>{
+    die.textContent=1+Math.floor(myRandom()*20); die.classList.add("spin");
+    setTimeout(()=>die.classList.remove("spin"),120);
+    if(++ticks>=10){
+      clearInterval(iv);
+      const d20=1+Math.floor(myRandom()*20);
+      die.textContent=d20;
+      const total=d20+bonus;
+      let outcome="basarisiz", cls="bad";
+      if(d20===20){ outcome="kritik_basari"; cls="ok"; }
+      else if(d20===1){ outcome="komik_aksilik"; cls="bad"; }
+      else if(total>=rr.dc){ outcome="basari"; cls="ok"; }
+      else if(total>=rr.dc-3){ outcome="kismi_basari"; cls="partial"; }
+      const label={basari:"BAŞARILI",kismi_basari:"KISMİ",basarisiz:"BAŞARISIZ",
+        kritik_basari:"KRİTİK BAŞARI! 🌟",komik_aksilik:"KOMİK AKSİLİK 😅"}[outcome];
+      $("rollOut").innerHTML=`<span class="res ${cls}">${d20} + ${bonus} = ${total} → ${label}</span>`;
+      S.lastRoll={ skill:rr.skill, detective:det.name, d20, bonus, total, dc:rr.dc, outcome };
+      setTimeout(()=>{
+        takeTurn(`${det.name}, "${rr.choiceText}" eylemini denedi. Zar sonucu: ${SKILL_LABELS[rr.skill]} ${total} (DC ${rr.dc}) → ${label}.`);
+      }, 700);
+    }
+  }, 70);
+}
+// d20 için basit RNG (Math.random sarmalayıcı; oyun istemcisinde tekrar gerekmez)
+function myRandom(){ return Math.random(); }
+
+/* ---------- 10. Sidebar render ---------- */
+function renderSidebars(){
+  // parti & envanter
+  const p=$("party");
+  p.innerHTML = S.detectives.map(d=>{
+    const a=ARCHETYPES[d.arch];
+    const sk=Object.entries(a.skills).filter(([,v])=>v>0)
+      .map(([k,v])=>`<span class="pill">${SKILL_LABELS[k]} +${v}</span>`).join("");
+    return `<div class="ent"><div><b>${esc(d.name)}</b> <span class="muted">· ${a.label}</span><br>${sk}</div></div>`;
+  }).join("");
+  if(S.inventory.length){
+    p.innerHTML += `<div style="margin-top:8px"><div class="muted" style="margin-bottom:4px">Eşyalar</div>`
+      + S.inventory.map(it=>`<span class="pill">🎒 ${esc(it)}</span>`).join("") + `</div>`;
+  }
+  $("invCt").textContent = S.inventory.length? S.inventory.length+" eşya" : "";
+
+  // notlar
+  const n=$("notes");
+  n.innerHTML = S.notes.length
+    ? S.notes.map(x=>`<div class="note">• ${esc(x)}</div>`).join("")
+    : `<div class="muted">Henüz not yok. İpuçlarını araştırdıkça burada birikecek.</div>`;
+  $("noteCt").textContent = S.notes.length? S.notes.length+" not" : "";
+
+  // varlıklar (yalnız keşfedilenler)
+  const ents=Object.values(S.registry).filter(e=>e.discovered);
+  const order={location:0,npc:1,item:2}; ents.sort((a,b)=>(order[a.type]-order[b.type]));
+  const tlabel={location:"mekân",npc:"kişi",item:"eşya"};
+  $("entities").innerHTML = ents.length
+    ? ents.map(e=>`<div class="ent"><span class="t">${tlabel[e.type]||e.type}</span>
+        <div><b>${esc(e.label)}</b> ${e.note?`<br><span class="muted">${esc(e.note)}</span>`:""}</div></div>`).join("")
+    : `<div class="muted">Henüz hiçbir yeri keşfetmediniz.</div>`;
+  $("entCt").textContent = ents.length? ents.length+" keşif" : "";
+}
+
+function showWinBanner(dm){
+  const b=document.createElement("div"); b.className="winbanner";
+  b.innerHTML=`<h2>🎉 Vaka Çözüldü!</h2>
+    <p class="muted">Dedektifler safiri bulup gerçek faili gerekçesiyle ortaya çıkardı.</p>
+    <button class="btn" style="margin-top:10px" id="winNew">Yeni Oyun</button>`;
+  $("choices").innerHTML=""; $("choices").appendChild(b);
+  $("freeInput").disabled=true; $("freeBtn").disabled=true;
+  $("winNew").onclick=resetGame;
+}
+
+/* ---------- 11. Kaydet / yükle ---------- */
+function save(){ try{ localStorage.setItem(LS_KEY, JSON.stringify(S)); }catch(e){} }
+function loadSave(){ try{ const r=localStorage.getItem(LS_KEY); return r? JSON.parse(r):null; }catch(e){ return null; } }
+
+/* ---------- 12. Akış kontrolü ---------- */
+function startGame(){
+  const cfg=readCfg();
+  $("setupErr").textContent="";
+  if(!cfg.apiKey){ $("setupErr").textContent="API anahtarı gerekli."; return; }
+  const dets = detDrafts.filter(d=>d.name.trim()).map(d=>({name:d.name.trim(), arch:d.arch}));
+  if(dets.length===0){ $("setupErr").textContent="En az bir dedektif adı girin."; return; }
+  localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+  S = freshState(dets, cfg); S.started=true;
+  $("setup").classList.add("hidden"); $("game").classList.remove("hidden");
+  $("btnReset").classList.remove("hidden");
+  renderSidebars();
+  takeTurn(""); // açılış sahnesi
+}
+function resumeGame(saved){
+  S=saved; S.cfg=readCfg().apiKey? readCfg() : S.cfg; // anahtarı güncel tut
+  $("setup").classList.add("hidden"); $("game").classList.remove("hidden");
+  $("btnReset").classList.remove("hidden");
+  renderSidebars();
+  if(S.pending){ renderDM(S.pending); }
+  else { renderSidebars(); }
+  // son DM yanıtını tekrar göstermek için saklı tutmuyoruz; defter/registry yeterli
+  $("narration").textContent = "Oyun kaldığı yerden sürüyor. Bir sonraki hamleni yap.";
+  $("choices").innerHTML="";
+  const b=document.createElement("button"); b.className="choice";
+  b.innerHTML='<span class="dot">▸</span> Araştırmaya devam et';
+  b.onclick=()=>takeTurn("Araştırmaya kaldığımız yerden devam ediyoruz. Mevcut sahneyi kısaca hatırlat ve seçenekler sun.");
+  $("choices").appendChild(b);
+}
+function resetGame(){
+  if(!confirm("Mevcut oyun silinsin ve yeni oyun başlasın mı?")) return;
+  localStorage.removeItem(LS_KEY);
+  location.reload();
+}
+
+/* ---------- 13. Bağlama ---------- */
+function init(){
+  loadCfg();
+  if(detDrafts.length===0){ addDetDraft(""); addDetDraft(""); } // 2 boş dedektif (iki kardeş)
+
+  $("addDet").onclick=()=>addDetDraft("");
+  $("startBtn").onclick=startGame;
+  $("freeBtn").onclick=()=>{ const v=$("freeInput").value.trim(); if(v){ $("freeInput").value=""; takeTurn(v); } };
+  $("freeInput").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("freeBtn").click(); } });
+  $("btnReset").onclick=resetGame;
+  $("btnSettings").onclick=()=>{
+    // kayıtlı oyun varsa setup yerine devam ettir; yine de ayar düzenlemeye izin ver
+    if($("game").classList.contains("hidden")) toast("Ayarlar üstte. API anahtarı ve modeli buradan değiştir.");
+    else { if(confirm("Ayar ekranına dön? (Oyun kaydedildi, sonra devam edebilirsin.)")){
+      $("game").classList.add("hidden"); $("setup").classList.remove("hidden"); }
+    }
+  };
+
+  // kayıtlı oyun var mı?
+  const saved=loadSave();
+  if(saved && saved.started && saved.detectives && saved.detectives.length){
+    // setup'ta küçük "devam et" kısayolu
+    const c=document.createElement("div"); c.className="card";
+    c.innerHTML=`<h2 style="color:var(--gold)">Kayıtlı oyun bulundu</h2>
+      <p class="muted">${saved.detectives.map(d=>esc(d.name)).join(", ")} ile yarım kalmış bir vaka var.</p>
+      <div class="row" style="margin-top:10px">
+        <button class="btn" id="resumeBtn">▸ Devam Et</button>
+        <button class="btn ghost" id="discardBtn">Sil, baştan başla</button>
+      </div>`;
+    $("setup").prepend(c);
+    $("resumeBtn").onclick=()=>{ const cfg=readCfg(); if(!cfg.apiKey){ toast("Önce API anahtarını gir."); return;} resumeGame(saved); };
+    $("discardBtn").onclick=()=>{ localStorage.removeItem(LS_KEY); c.remove(); };
+  }
+}
+init();
+</script>
+</body>
+</html>
