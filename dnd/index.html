@@ -474,8 +474,8 @@ async function callDM(playerAction){
     max_tokens: 1100,
     system: sys,
     messages: [
-      { role:"user", content: playerAction || "Oyunu başlat ve açılış sahnesini anlat." },
-      { role:"assistant", content: "{" } // JSON'a zorla
+      { role:"user", content: (playerAction || "Oyunu başlat ve açılış sahnesini anlat.")
+        + "\n\nYALNIZCA tek bir geçerli JSON nesnesi döndür; başına/sonuna hiçbir metin veya ``` ekleme." }
     ],
   };
   const res = await fetch("https://api.anthropic.com/v1/messages",{
@@ -494,7 +494,6 @@ async function callDM(playerAction){
   }
   const data = await res.json();
   let text = (data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
-  text = "{" + text; // prefill'i geri ekle
   return parseDMJson(text);
 }
 
