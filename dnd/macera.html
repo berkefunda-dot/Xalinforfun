@@ -646,11 +646,15 @@ function startRoll(rr){
   $("rollDc").innerHTML=isAtk?`Hedef: <span class="tgt">${esc(enemyLabel(rr.target)||"düşman")}</span> · ZS ${rr.dc}`:`Zorluk (DC) ${rr.dc}`;
   const wrap=$("rollWhoWrap");
   const elig=S.heroes.filter(h=>!h.downed&&!h.dead); const pool=elig.length?elig:S.heroes;
-  if(pool.length>1){
+  curRoll.pool=pool;
+  // Seçenek metni tek bir kahramanı belirtiyorsa onu otomatik seç, "Kim?" sorma
+  let forced=-1; const ct=(rr.choiceText||"").toLowerCase();
+  if(ct){const hit=pool.map((h,i)=>i).filter(i=>{const nm=(pool[i].name||"").toLowerCase().trim();return nm&&ct.includes(nm);});if(hit.length===1)forced=hit[0];}
+  if(pool.length>1 && forced<0){
     wrap.innerHTML=`<label style="margin:0 0 6px">Kim?</label><select id="rollWho">${pool.map((h,i)=>`<option value="${i}">${esc(h.name)} — ${isAtk?("Saldırı +"+CLASSES[h.cls].atk):(SKILL_LABELS[rr.skill]+" +"+heroBonus(h,rr.skill))}</option>`).join("")}</select>`;
     wrap.classList.remove("hidden"); $("rollWho").onchange=e=>{curRoll.idx=+e.target.value;updateRollFace(pool);};
-  } else {wrap.innerHTML="";wrap.classList.add("hidden");}
-  curRoll.pool=pool; updateRollFace(pool);
+  } else { if(forced>=0)curRoll.idx=forced; wrap.innerHTML=""; wrap.classList.add("hidden"); }
+  updateRollFace(pool);
   $("bigDie").textContent="?";$("bigDie").className="bigdie";$("rollFormula").textContent="";$("rollOutcome").textContent="";$("rollOutcome").className="outcome";$("rollDmg").textContent="";
   $("rollActions").innerHTML='<button class="btn" id="rollGo">🎲 Zar At</button><button class="btn ghost" id="rollCancel">Vazgeç</button>';
   $("rollGo").onclick=doRoll; $("rollCancel").onclick=()=>$("rollModal").classList.add("hidden");
