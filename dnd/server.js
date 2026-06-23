@@ -15,7 +15,8 @@ const path = require("path");
 const { spawn } = require("child_process");
 
 const PORT     = process.env.PORT || 8787;
-const HOST     = "127.0.0.1";
+// Varsayılan yalnız bu bilgisayar. Tablet/telefon (aynı Wi-Fi) için HOST=0.0.0.0 ile başlat (start-lan.cmd).
+const HOST     = process.env.HOST || "127.0.0.1";
 const ROOT     = __dirname;
 
 // --- Görsel ayarları (isteğe bağlı, ortam değişkeniyle) ---
@@ -151,9 +152,17 @@ const server = http.createServer(async (req,res)=>{
 });
 
 server.listen(PORT,HOST,()=>{
-  console.log("\n  🔍 Sisli Fener Konağı — yerel sunucu hazır");
-  console.log("  ▶  http://"+HOST+":"+PORT+"/");
+  console.log("\n  🔍 Sisli Fener Konağı / 🐉 Sönen Ocak — yerel sunucu hazır");
+  console.log("  ▶  Bu bilgisayar:  http://127.0.0.1:"+PORT+"/   (D&D: /macera.html)");
+  if(HOST==="0.0.0.0"){
+    const ips=[];
+    Object.values(os.networkInterfaces()).forEach(list=>(list||[]).forEach(i=>{ if(i.family==="IPv4" && !i.internal) ips.push(i.address); }));
+    console.log("  ▶  Tablet/telefon (AYNI Wi-Fi'den aç):");
+    if(ips.length) ips.forEach(ip=>console.log("       http://"+ip+":"+PORT+"/        (D&D: /macera.html)"));
+    else console.log("       (IPv4 adresi bulunamadı — 'ipconfig' ile bak)");
+    console.log("  ⚠ İlk seferde Windows 'Erişime izin ver' sorarsa ONAYLA (Özel ağ).");
+  }
   console.log("  DM kaynağı: Claude Code aboneliğin (API ücreti yok)");
-  console.log("  Görsel: "+(SD_URL?("yerel SD @ "+SD_URL):(GEMINI_KEY?"Gemini":"yok (degrade kart)")));
+  console.log("  Görsel: "+(SD_URL?("yerel SD @ "+SD_URL):(GEMINI_KEY?"Gemini":"Pollinations/degrade (istemcide)")));
   console.log("  Durdurmak için Ctrl+C\n");
 });

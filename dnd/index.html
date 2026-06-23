@@ -773,7 +773,9 @@ function downscaleDataUrl(dataUrl, size){
   });
 }
 
-const IS_LOCAL = ["localhost","127.0.0.1",""].includes(location.hostname);
+// Sunucudan (localhost veya LAN IP'si, ör. tabletten 192.168.x.x) açıldıysa yerel/ücretsiz mod uygundur.
+// Yalnız GitHub Pages (github.io) ve dosya (file://) için "API" varsayılanı.
+const IS_LOCAL = location.protocol.startsWith("http") && !/\.github\.io$/i.test(location.hostname);
 function loadCfg(){
   let c={};
   try{ c=JSON.parse(localStorage.getItem(LS_CFG)||"{}"); }catch(e){}

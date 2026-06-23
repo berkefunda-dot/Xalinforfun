@@ -457,7 +457,7 @@ function loadCfg(){let c={};try{c=JSON.parse(localStorage.getItem(LS_CFG)||"{}")
   updateSourceVis();}
 function readCfg(){return{aiSource:$("aiSource").value,apiKey:$("apiKey").value.trim(),model:$("model").value,artMode:$("artMode").value,imgKey:(()=>{try{return JSON.parse(localStorage.getItem(LS_CFG)||"{}").imgKey||"";}catch(e){return"";}})()};}
 function updateSourceVis(){$("apiKeyWrap").classList.toggle("hidden",$("aiSource").value==="local");}
-const IS_LOCAL=["localhost","127.0.0.1",""].includes(location.hostname);
+const IS_LOCAL=location.protocol.startsWith("http") && !/\.github\.io$/i.test(location.hostname);
 
 /* ---------- 6. DM çağrısı ---------- */
 function heroSheet(h){const c=CLASSES[h.cls];return{ad:h.name,sinif:c.label,cp:h.cp,cp_max:h.cpMax,zs:c.zs,saldiri:"+"+c.atk,hasar:c.dmg,beceriler:c.skills,guc_yetenegi:c.power,durum:h.downed?"düşkün":"ayakta"};}
